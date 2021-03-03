@@ -6,9 +6,6 @@ import (
 	"log"
 	"strings"
 )
-type Message struct {
-    cert_index int64
-}
 
 type CertInfo struct {
 	CertIndex		int32
