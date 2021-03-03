@@ -107,9 +107,12 @@ func main() {
 				OCSP = (strings.Split(OCSP, "\n")[0]) + "\n";
 			}
 
-			CRL, err := jq.String("data","source", "url")
-			if err != nil { log.Printf("Error decoding jq source url."); }
-
+			CRL, err := jq.String("data", "leaf_cert", "extensions", "crlDistributionPoints")
+			if err != nil {
+				log.Printf("Error decoding jq CRL.");
+			} else {
+				CRL = strings.Split((strings.Split(CRL, "URI:")[1]), "\n")[0];
+			}
 
 			insertIntoDB(*client, ctx, cancel, CertInfo, SerialNumber, Domain, OCSP, CRL);
 
