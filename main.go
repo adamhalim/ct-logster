@@ -48,7 +48,7 @@ func main() {
 			}
 
 			CRL, err := jq.String("data","source", "url")
-			if err != nil { log.Printf("Max kan inte koda"); }
+			if err != nil { log.Printf("Error decoding jq source url."); }
 
 
 
