@@ -46,7 +46,7 @@ func insertIntoDB(client mongo.Client, ctx context.Context, cancel context.Cance
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-
+	//Actual insert to MongoDB. Could possibly be done in batches for better performance
 	_, err := collection.InsertOne(ctx, bson.D{
 		{"certIndex", certIndex},
 		{"serialNumber", serialNumber},
@@ -70,11 +70,13 @@ func main() {
 	uri := "mongodb://" + dbIp + ":" + dbPort
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 
+	//disconnects the db when exiting main.
 	defer func() {
 		if err = client.Disconnect(ctx); err != nil {
 			panic(err)
 		}
 	}()
+
 
 	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -84,6 +86,7 @@ func main() {
 
 
 	for {
+		//For more informaiton please see: https://pkg.go.dev/github.com/jmoiron/jsonq
 		select {
 		case jq := <-stream:
 			_, err := jq.String("message_type");
@@ -120,6 +123,7 @@ func main() {
 				}				
 			}			
 
+			//Error prone due to inconsistent certificate format.
 			CRL, err := jq.String("data", "leaf_cert", "extensions", "crlDistributionPoints")
 			if err != nil {
 				log.Printf("Error decoding jq CRL.");
@@ -127,8 +131,11 @@ func main() {
 				CRL = strings.Split((strings.Split(CRL, "URI:")[1]), "\n")[0];
 			}
 
+			//ctx and cancel given from beginning of main.
 			insertIntoDB(*client, ctx, cancel, CertInfo, SerialNumber, Domain, OCSP, CRL);
 
+
+			//dev-prints:
 			fmt.Printf("Cert index: %d\n", CertInfo);
 			fmt.Printf("Serial number: %s\n", SerialNumber);
 			fmt.Printf("Domain: %s\n", Domain);
