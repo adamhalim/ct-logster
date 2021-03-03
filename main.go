@@ -47,9 +47,15 @@ func main() {
 				OCSP = (strings.Split(OCSP, "\n")[0]) + "\n";
 			}
 
+			CRL, err := jq.String("data","source", "url")
+			if err != nil { log.Printf("Max kan inte koda"); }
+
+
+
 			fmt.Printf("Cert index: %d\n", CertInfo);
 			fmt.Printf("Serial number: %s\n", SerialNumber);
 			fmt.Printf("Domain: %s\n", Domain);
+			fmt.Printf("CRL URL: %s\n", CRL);
 			fmt.Printf("OCSP URL: %s\n", OCSP);
 
 		case err := <-errStream:
