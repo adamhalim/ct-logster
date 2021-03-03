@@ -108,7 +108,7 @@ func main() {
 				// This is a poor, hack:y attempt to try and grab only the line that
 				// is the OCSP URI
 				OCSP = strings.Split(OCSP, "OCSP - URI:")[1];
-				OCSP = (strings.Split(OCSP, "\n")[0]) + "\n";
+				OCSP = (strings.Split(OCSP, "\n")[0]);
 				} else 	if (strings.Contains(OCSP, "CA Issuers - URI:")) {
 					if(strings.Contains(OCSP, strings.Split(OCSP, "CA Issuers - URI:")[0])) {
 						OCSP = strings.Split(OCSP, "CA Issuers - URI:")[1];
@@ -132,6 +132,7 @@ func main() {
 			fmt.Printf("Domain: %s\n", Domain);
 			fmt.Printf("CRL URL: %s\n", CRL);
 			fmt.Printf("OCSP URL: %s\n", OCSP);
+			fmt.Printf("\n");
 
 		case err := <-errStream:
 			log.Printf(err.Error());
