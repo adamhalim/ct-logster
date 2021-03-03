@@ -100,12 +100,23 @@ func main() {
 
 			OCSP, err := jq.String("data", "leaf_cert", "extensions", "authorityInfoAccess");
 
-			// Sometimes, the OCSP - URI and CA Issuers - URI were reversed.
-			// This fixes it.
-			OCSP = strings.Split(OCSP, "OCSP - URI:")[1];
-			if (strings.Contains(OCSP, "CA Issuers - URI:")) {
+			if err != nil {
+				log.Printf("Error decoding jq OCSP.");
+			} else {
+				if(strings.Contains(OCSP, "OCSP - URI:")) {
+				// Sometimes, the OCSP - URI and CA Issuers - URI were reversed.
+				// This is a poor, hack:y attempt to try and grab only the line that
+				// is the OCSP URI
+				OCSP = strings.Split(OCSP, "OCSP - URI:")[1];
 				OCSP = (strings.Split(OCSP, "\n")[0]) + "\n";
-			}
+				} else 	if (strings.Contains(OCSP, "CA Issuers - URI:")) {
+					if(strings.Contains(OCSP, strings.Split(OCSP, "CA Issuers - URI:")[0])) {
+						OCSP = strings.Split(OCSP, "CA Issuers - URI:")[1];
+					} else {
+						OCSP = strings.Split(OCSP, "CA Issuers - URI:")[0];
+					}
+				}				
+			}			
 
 			CRL, err := jq.String("data", "leaf_cert", "extensions", "crlDistributionPoints")
 			if err != nil {
