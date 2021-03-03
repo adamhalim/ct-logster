@@ -46,12 +46,14 @@ func insertIntoDB(client mongo.Client, ctx context.Context, cancel context.Cance
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+
 	_, err := collection.InsertOne(ctx, bson.D{
 		{"certIndex", certIndex},
 		{"serialNumber", serialNumber},
 		{"Domain", domain},
 		{"OCSP", OCSP },
 		{"CRL", CRL},
+		{"Time", time.Now().Hour()},
 	})
 	if (err != nil) {
 		fmt.Print("Error inserting.")
