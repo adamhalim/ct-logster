@@ -109,18 +109,19 @@ func main() {
 				log.Printf("Error decoding jq OCSP.");
 			} else {
 				if(strings.Contains(OCSP, "OCSP - URI:")) {
-				// Sometimes, the OCSP - URI and CA Issuers - URI were reversed.
-				// This is a poor, hack:y attempt to try and grab only the line that
-				// is the OCSP URI
-				OCSP = strings.Split(OCSP, "OCSP - URI:")[1];
-				OCSP = (strings.Split(OCSP, "\n")[0]);
-				} else 	if (strings.Contains(OCSP, "CA Issuers - URI:")) {
-					if(strings.Contains(OCSP, strings.Split(OCSP, "CA Issuers - URI:")[0])) {
-						OCSP = strings.Split(OCSP, "CA Issuers - URI:")[1];
-					} else {
-						OCSP = strings.Split(OCSP, "CA Issuers - URI:")[0];
+					tempStr := strings.Split(OCSP, "OCSP - URI:");
+					if (len(tempStr) > 1) {
+						if(strings.Contains(tempStr[1], "CA Issuers - URI:")) {
+							OCSP = (strings.Split(tempStr[1], "CA Issuers - URI:"))[0];
+							OCSP = strings.Trim(OCSP, "\n");
+						} else {
+							OCSP = tempStr[1];
+							OCSP = strings.Trim(OCSP, "\n");
+						}
 					}
-				}				
+				} else {
+					fmt.Printf("Error: No OCSP URI found.")
+				}	
 			}			
 
 			//Error prone due to inconsistent certificate format.
