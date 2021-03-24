@@ -5,18 +5,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	//"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	"context"
 	"time"
 	"fmt"
 	"log"
 	"os"
-	//"sync"
+	"sync"
 )
 
 
-var dbUsername, dbPassword, dbIp, dbPort string
+//var dbUsername, dbPassword, dbIp, dbPort string
 const database, collection = "dev", "certTest"
 
 // Loads .env file
@@ -84,7 +84,11 @@ func IterateAllCerts() {
 					wg.Add(1)
 					go func() {
 						defer wg.Done()
-						_, chain := GetCertChain(indexStr, urlStr)
+						_, chain, err := GetCertChain(indexStr, urlStr)
+						if err != nil {
+							fmt.Printf("Error getting Cert Chain: %v", err.Error())
+							return
+						}
 						certificates, err := DecodePem(chain)
 						if err != nil {
 							fmt.Printf("%s", err.Error())
