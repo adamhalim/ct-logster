@@ -32,7 +32,7 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 }
 
-func main() {
+func notHuvud() {
 
 	//cronjobs start
 	log.Info("Create new cron")
