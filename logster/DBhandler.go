@@ -31,6 +31,10 @@ func init() {
 	dbPort = os.Getenv("PORT")
 }
 
+func main() {
+	IterateAllCerts()
+}
+
 // This will iterate though all certs in 
 // database.collection and currently runs 
 // GetCertChain() on all documents.
@@ -80,7 +84,15 @@ func IterateAllCerts() {
 					go func() {
 						defer wg.Done()
 						_, chain := GetCertChain(indexStr, urlStr)
-						fmt.Printf("\n----\n%s", chain)
+						certificates, err := DecodePem(chain)
+						if err != nil {
+							fmt.Printf("%s", err.Error())
+						}
+						if certificates == nil {
+							fmt.Print("No certs decoded.\n")
+						} else {
+
+						}
 					}()
 				}
 			}
