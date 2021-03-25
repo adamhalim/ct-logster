@@ -13,18 +13,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-
 )
 
 type CertInfo struct {
-	CertIndex    int		`bson:"certIndex"`
-	SerialNumber string		`bson:"serialNumber"`
-	Domain       []string	`bson:"domains"`
-	OCSP         string		`bson:"OCSP,omitempty"`
-	CRL          string		`bson:"CRL,omitempty"`
-	CTlog		 string		`bson:"ctLog"`
+	CertIndex    int      `bson:"certIndex"`
+	SerialNumber string   `bson:"serialNumber"`
+	Domain       []string `bson:"domains"`
+	OCSP         string   `bson:"OCSP,omitempty"`
+	CRL          string   `bson:"CRL,omitempty"`
+	CTlog        string   `bson:"ctLog"`
+	Certificate  string   `bson:"cert,omitempty"`
+	Chain        string   `bson:"certChain,omitempty"`
 }
 
+var dbUsername, dbPassword, dbIp, dbPort string
 
 // Loads .env file
 func init() {
@@ -42,7 +44,7 @@ func init() {
 func insertIntoDB(client mongo.Client, ctx context.Context, cancel context.CancelFunc,
 	cert CertInfo) {
 
-	collection := client.Database("dev").Collection("certTestTwo")
+	collection := client.Database("dev").Collection("certTestThree")
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -54,6 +56,7 @@ func insertIntoDB(client mongo.Client, ctx context.Context, cancel context.Cance
 }
 
 func main() {
+	counter := 0
 	// The false flag specifies that we want heartbeat messages.
 	stream, errStream := certstream.CertStreamEventStream(false)
 
@@ -138,26 +141,42 @@ func main() {
 
 			// Fill struct with data
 			cert := CertInfo{
-				CertIndex: CertIndex,
+				CertIndex:    CertIndex,
 				SerialNumber: SerialNumber,
-				Domain: Domain,
-				OCSP: OCSP,
-				CRL: CRL,
-				CTlog: CTlog,
-			} 
-			
-			//ctx and cancel given from beginning of main.
-			insertIntoDB(*client, ctx, cancel, cert);
+				Domain:       Domain,
+				OCSP:         OCSP,
+				CRL:          CRL,
+				CTlog:        CTlog,
+			}
+
+			go func() {
+				if CTlog != "" {
+					chain, err := DownloadCertFromCT(CertIndex, CTlog)
+					if err != nil {
+						fmt.Printf("ErrorSWAG: %q\n", err.Error())
+						counter++
+					}
+					if chain != "" {
+					}
+					cert.Chain = chain
+					insertIntoDB(*client, ctx, cancel, cert)
+
+				} else {
+					insertIntoDB(*client, ctx, cancel, cert)
+				}
+				fmt.Printf("Error counter: %d\n", counter)
+			}()
 
 			//dev-prints:
-			fmt.Printf("Cert index: %d\n", CertIndex)
-			fmt.Printf("Serial number: %s\n", SerialNumber)
-			fmt.Printf("Domain: %s\n", Domain)
-			fmt.Printf("CRL URL: %s\n", CRL)
-			fmt.Printf("OCSP URL: %s\n", OCSP)
-			fmt.Printf("CT log URL: %s\n", CTlog)
-			fmt.Printf("\n")
-
+			/*
+				fmt.Printf("Cert index: %d\n", CertIndex)
+				fmt.Printf("Serial number: %s\n", SerialNumber)
+				fmt.Printf("Domain: %s\n", Domain)
+				fmt.Printf("CRL URL: %s\n", CRL)
+				fmt.Printf("OCSP URL: %s\n", OCSP)
+				fmt.Printf("CT log URL: %s\n", CTlog)
+				fmt.Printf("\n")
+			*/
 		case err := <-errStream:
 			log.Printf(err.Error())
 		}
