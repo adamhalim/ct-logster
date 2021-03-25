@@ -178,3 +178,20 @@ func IterateBlock(blockTime int){
 		fmt.Println(entry)
 	}
 }
+
+// Checks whether a certificate already is in the cert chain DB.
+// We run this for every cert in the chain to avoid saving duplicates.
+// (A lot of certificates share chain certs)
+func isChainInDB(chainCert string, client *mongo.Client) (bool, error) {
+	col := client.Database(dbName).Collection(dbChainCollection)
+	cursor, err := col.Find(context.TODO(), bson.M{"pem": chainCert})
+	if err != nil {
+		return false , err
+	}
+
+	// If we found something, return true
+	for cursor.Next(context.TODO()) {
+		return true, nil
+	}
+	return false, nil
+}
