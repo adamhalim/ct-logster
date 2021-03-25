@@ -48,7 +48,7 @@ func InsertIntoDB(client mongo.Client, ctx context.Context, cancel context.Cance
 }
 
 // Makes one insertion into MongoDB
-func InsertChainIntoDB(client mongo.Client, ctx context.Context, cancel context.CancelFunc, chain CertChain) {
+func InsertChainIntoDB(client mongo.Client, ctx context.Context, cancel context.CancelFunc, chain ChainCertPem) {
 
 	if chain.PEM == "" {
 		fmt.Printf("Error inserting: Chain is empty.\n")

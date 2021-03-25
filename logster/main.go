@@ -26,6 +26,10 @@ type CertInfo struct {
 	Chain        string   `bson:"certChain,omitempty"`
 }
 
+type ChainCertPem struct {
+	PEM string `bson:"pem"`
+}
+
 // Loads .env file
 func init() {
 	err := godotenv.Load()
