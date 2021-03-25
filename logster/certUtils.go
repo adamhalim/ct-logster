@@ -129,14 +129,14 @@ func getTlsCert(certInput string) tls.Certificate {
 // Given the CT log and index, this function will
 // download the associated certificate(s) and return them
 // as PEM strings
-func DownloadCertFromCT(index int, url string) (string, error) {
+func DownloadCertFromCT(index int, url string) (cert string, chain []string, err error) {
 	urlPadding := "https://" + url
 
 	logClient := GetLogClient(urlPadding)
 	i64 := int64(index)
 	entry, err := logClient.GetRawEntries(ctx, i64, i64)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	// Iterate through all entires (we only really get one at a time,
@@ -144,23 +144,24 @@ func DownloadCertFromCT(index int, url string) (string, error) {
 	for _, entry := range entry.Entries {
 		logentry, _ := ct.RawLogEntryFromLeaf(i64, &entry)
 		if logentry != nil {
-			var PEMchain string
+			var cert string
+			var PEMchain []string
 			ts := logentry.Leaf.TimestampedEntry
 			switch ts.EntryType {
 			case ct.X509LogEntryType:
-				PEMchain += getPEMdata(ts.X509Entry.Data)
+				cert += getPEMdata(ts.X509Entry.Data)
 			case ct.PrecertLogEntryType:
-				PEMchain += getPEMdata(logentry.Cert.Data)
+				cert += getPEMdata(logentry.Cert.Data)
 			default:
 				fmt.Printf("Unhandled log entry type %d\n", ts.EntryType)
 			}
 			for _, c := range logentry.Chain {
-				PEMchain += getPEMdata(c.Data)
+				PEMchain = append(PEMchain, getPEMdata(c.Data))
 			}
-			return PEMchain, nil
+			return cert, PEMchain, nil
 		}
 	}
-	return "", errors.New("No CT log entires found.")
+	return "", nil, errors.New("No CT log entires found.")
 }
 
 // Will take raw data and decode it to a
