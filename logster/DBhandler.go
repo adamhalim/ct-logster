@@ -51,11 +51,13 @@ func InsertIntoDB(client mongo.Client, ctx context.Context, cancel context.Cance
 // Makes one insertion into MongoDB
 func InsertChainIntoDB(client mongo.Client, ctx context.Context, cancel context.CancelFunc, chain ChainCertPem) {
 
+	// If, for any reason, the Chain certificate is empty,
+	// we return.
 	if chain.PEM == "" {
 		fmt.Printf("Error inserting: Chain is empty.\n")
 		return
 	}
-	// We check if the CertChain already is stored in the DB.
+	// We check if the CertChainPem already is stored in the DB.
 	chainInDB, err := isChainInDB(chain.PEM, &client)
 	if err != nil {
 		fmt.Printf("Error checking if cert is in db: %v", err.Error())
