@@ -53,7 +53,7 @@ func insertIntoDB(client mongo.Client, ctx context.Context, cancel context.Cance
 	}
 }
 
-func mainsas() {
+func main() {
 	// The false flag specifies that we want heartbeat messages.
 	stream, errStream := certstream.CertStreamEventStream(false)
 
