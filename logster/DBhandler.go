@@ -16,8 +16,7 @@ import (
 )
 
 
-var dbUsername, dbPassword, dbIp, dbPort string
-const database, collection = "dev", "certTestRee"
+var dbUsername, dbPassword, dbIp, dbPort, dbName, dbCollection, dbChainCollection string
 
 // Loads .env file
 func init() {
@@ -29,6 +28,9 @@ func init() {
 	dbPassword = os.Getenv("PASSWORD")
 	dbIp = os.Getenv("IP_ADDRESS")
 	dbPort = os.Getenv("PORT")
+	dbName = os.Getenv("DB")
+	dbCollection = os.Getenv("MAIN_COLLECTION")
+	dbChainCollection = os.Getenv("CERT_COLLECTION")
 }
 
 // Makes one insertion into MongoDB
@@ -68,7 +70,7 @@ func IterateAllCerts() {
 
 	fmt.Println("Connected to MongoDB Server: " + dbIp + ".")
 
-	col := client.Database(database).Collection(collection)
+	col := client.Database(dbName).Collection(dbCollection)
 	cursor, err := col.Find(context.TODO(), bson.D{})
 	if err != nil {
 		fmt.Println("Finding all documents ERROR:", err)
@@ -142,7 +144,7 @@ func IterateBlock(blockTime int){
 	// Here's an array in which you can store the decoded documents
 	var res []*CertInfo
 
-	col := client.Database(database).Collection(collection)
+	col := client.Database(dbName).Collection(dbCollection)
 
 	// Passing bson.D{{}} as the filter matches all documents in the collection
 	cur, err := col.Find(context.TODO(), bson.D{{"Time", blockTime}}, findOptions)
