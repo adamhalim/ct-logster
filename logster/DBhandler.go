@@ -16,7 +16,7 @@ import (
 )
 
 
-//var dbUsername, dbPassword, dbIp, dbPort string
+var dbUsername, dbPassword, dbIp, dbPort string
 const database, collection = "dev", "certTest"
 
 // Loads .env file
@@ -29,11 +29,6 @@ func init() {
 	dbPassword = os.Getenv("PASSWORD")
 	dbIp = os.Getenv("IP_ADDRESS")
 	dbPort = os.Getenv("PORT")
-}
-
-func main() {
-	IterateAllCerts()
-	IterateBlock(11)
 }
 
 // This will iterate though all certs in 
