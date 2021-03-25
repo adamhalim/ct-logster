@@ -17,7 +17,7 @@ import (
 
 
 var dbUsername, dbPassword, dbIp, dbPort string
-const database, collection = "dev", "certTest"
+const database, collection = "dev", "certTestRee"
 
 // Loads .env file
 func init() {
@@ -29,6 +29,20 @@ func init() {
 	dbPassword = os.Getenv("PASSWORD")
 	dbIp = os.Getenv("IP_ADDRESS")
 	dbPort = os.Getenv("PORT")
+}
+
+// Makes one insertion into MongoDB
+func InsertIntoDB(client mongo.Client, ctx context.Context, cancel context.CancelFunc, cert CertInfo) {
+
+	collection := client.Database("dev").Collection("certTestThree")
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	//Actual insert to MongoDB. Could possibly be done in batches for better performance
+	_, err := collection.InsertOne(ctx, cert)
+	if err != nil {
+		fmt.Print("Error inserting.")
+	}
 }
 
 // This will iterate though all certs in 

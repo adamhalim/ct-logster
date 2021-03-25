@@ -26,8 +26,6 @@ type CertInfo struct {
 	Chain        string   `bson:"certChain,omitempty"`
 }
 
-var dbUsername, dbPassword, dbIp, dbPort string
-
 // Loads .env file
 func init() {
 	err := godotenv.Load()
@@ -38,21 +36,6 @@ func init() {
 	dbPassword = os.Getenv("PASSWORD")
 	dbIp = os.Getenv("IP_ADDRESS")
 	dbPort = os.Getenv("PORT")
-}
-
-// Makes one insertion into MongoDB
-func insertIntoDB(client mongo.Client, ctx context.Context, cancel context.CancelFunc,
-	cert CertInfo) {
-
-	collection := client.Database("dev").Collection("certTestThree")
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	//Actual insert to MongoDB. Could possibly be done in batches for better performance
-	_, err := collection.InsertOne(ctx, cert)
-	if err != nil {
-		fmt.Print("Error inserting.")
-	}
 }
 
 func main() {
@@ -159,10 +142,10 @@ func main() {
 					if chain != "" {
 					}
 					cert.Chain = chain
-					insertIntoDB(*client, ctx, cancel, cert)
+					InsertIntoDB(*client, ctx, cancel, cert)
 
 				} else {
-					insertIntoDB(*client, ctx, cancel, cert)
+					InsertIntoDB(*client, ctx, cancel, cert)
 				}
 				fmt.Printf("Error counter: %d\n", counter)
 			}()
