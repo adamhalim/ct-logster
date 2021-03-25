@@ -35,6 +35,7 @@ func init() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
+		os.Exit(0)
 	}
 	dbUsername = os.Getenv("USERNAME")
 	dbPassword = os.Getenv("PASSWORD")
