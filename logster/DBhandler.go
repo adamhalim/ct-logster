@@ -215,16 +215,27 @@ func IterateBlock(blockTime int){
 // Checks whether a certificate already is in the cert chain DB.
 // We run this for every cert in the chain to avoid saving duplicates.
 // (A lot of certificates share chain certs)
-func isChainInDB(chainCert string, client *mongo.Client) (bool, error) {
+func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err error) {
 	col := client.Database(dbName).Collection(dbChainCollection)
-	cursor, err := col.Find(context.TODO(), bson.M{"pem": chainCert})
+	cursor, err := col.Find(context.Background(), bson.M{"pem": chainCert})
 	if err != nil {
-		return false , err
+		return "", err
 	}
 
-	// If we found something, return true
-	for cursor.Next(context.TODO()) {
-		return true, nil
+	// If we found something, we return the
+	// Mongo object ID string
+	for cursor.Next(context.Background()) {
+		var result bson.M
+		err := cursor.Decode(&result)
+		if err != nil {
+			fmt.Printf("Error decoding cert.\n")
+			return "", err
+		}
+		// We convert the result to a ObjectID and return
+		// the Object ID string
+		objectID := result["_id"]
+		stringObjectID := objectID.(primitive.ObjectID).Hex()
+		return stringObjectID, nil
 	}
-	return false, nil
+	return "", nil
 }
