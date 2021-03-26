@@ -23,7 +23,8 @@ type CertInfo struct {
 	CRL          string   `bson:"CRL,omitempty"`
 	CTlog        string   `bson:"ctLog"`
 	Certificate  string   `bson:"cert,omitempty"`
-	Chain        []string   `bson:"certChain,omitempty"`
+	Chain        []string `bson:"certChain,omitempty"`
+	Time         int      `bson:"Time"`
 }
 
 type ChainCertPem struct {
@@ -135,6 +136,7 @@ func main() {
 				OCSP:         OCSP,
 				CRL:          CRL,
 				CTlog:        CTlog,
+				Time:         time.Now().Hour(),
 			}
 
 			go func() {
