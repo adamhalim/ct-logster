@@ -23,7 +23,7 @@ type CertInfo struct {
 	CRL          string   `bson:"CRL,omitempty"`
 	CTlog        string   `bson:"ctLog"`
 	Certificate  string   `bson:"cert,omitempty"`
-	Chain        string   `bson:"certChain,omitempty"`
+	Chain        []string   `bson:"certChain,omitempty"`
 }
 
 type ChainCertPem struct {
@@ -139,18 +139,30 @@ func main() {
 
 			go func() {
 				if CTlog != "" {
-					chain, err := DownloadCertFromCT(CertIndex, CTlog)
+					certificate, chain, err := DownloadCertFromCT(CertIndex, CTlog)
 					if err != nil {
-						fmt.Printf("ErrorSWAG: %q\n", err.Error())
+						fmt.Printf("Error downloading certs: %q\n", err.Error())
 						counter++
+						return
 					}
-					if chain != "" {
-					}
-					cert.Chain = chain
-					InsertIntoDB(*client, ctx, cancel, cert)
 
+					var chainIDS []string
+					// For the cert chain, we try to insert these
+					// into the DB and append all associated chain certs
+					// to []chainIDS.
+					for _, entry := range chain {
+						chainID := InsertChainIntoDB(*client, cancel, ChainCertPem{
+							PEM: entry,
+						})
+						chainIDS = append(chainIDS, chainID)
+					}
+					// Set the structs cert and chain parameters.
+					// then push it to the DB
+					cert.Certificate = certificate
+					cert.Chain = chainIDS
+					InsertIntoDB(*client, cancel, cert)
 				} else {
-					InsertIntoDB(*client, ctx, cancel, cert)
+					InsertIntoDB(*client, cancel, cert)
 				}
 				fmt.Printf("Error counter: %d\n", counter)
 			}()
