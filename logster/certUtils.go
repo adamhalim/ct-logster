@@ -134,7 +134,7 @@ func DownloadCertFromCT(index int, url string) (cert string, chain []string, err
 
 	logClient := GetLogClient(urlPadding)
 	i64 := int64(index)
-	entry, err := logClient.GetRawEntries(ctx, i64, i64)
+	entry, err := logClient.GetRawEntries(context.Background(), i64, i64)
 	if err != nil {
 		return "", nil, err
 	}
