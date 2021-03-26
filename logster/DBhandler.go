@@ -35,7 +35,7 @@ func init() {
 }
 
 // Makes one insertion into MongoDB
-func InsertIntoDB(client mongo.Client, ctx context.Context, cancel context.CancelFunc, cert CertInfo) {
+func InsertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo) {
 
 	collection := client.Database("dev").Collection("certTestThree")
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
