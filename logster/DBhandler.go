@@ -36,7 +36,7 @@ func init() {
 }
 
 // Makes one insertion into MongoDB
-func InsertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo) {
+func InsertCertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo) error{
 
 	collection := client.Database("dev").Collection("certTestThree")
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
@@ -45,8 +45,9 @@ func InsertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo)
 	//Actual insert to MongoDB. Could possibly be done in batches for better performance
 	_, err := collection.InsertOne(ctx, cert)
 	if err != nil {
-		fmt.Print("Error inserting.")
+		return err
 	}
+	return nil
 }
 
 // Makes one insertion into MongoDB

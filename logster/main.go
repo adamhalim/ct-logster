@@ -166,9 +166,9 @@ func main() {
 					// then push it to the DB
 					cert.Certificate = certificate
 					cert.Chain = chainIDS
-					InsertIntoDB(*client, cancel, cert)
-				} else {
-					InsertIntoDB(*client, cancel, cert)
+				err = InsertCertIntoDB(*client, cancel, cert)
+				if err != nil {
+					fmt.Printf("Error inserting cert into DB: %v", err.Error())
 				}
 				fmt.Printf("Error counter: %d\n", counter)
 			}()
