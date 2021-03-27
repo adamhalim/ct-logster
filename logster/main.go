@@ -153,9 +153,13 @@ func main() {
 					// into the DB and append all associated chain certs
 					// to []chainIDS.
 					for _, entry := range chain {
-						chainID := InsertChainIntoDB(*client, cancel, ChainCertPem{
+						chainID, err := InsertChainIntoDB(*client, cancel, ChainCertPem{
 							PEM: entry,
 						})
+						if err != nil {
+							fmt.Printf("Error inserting chain cert into DB: %v", err.Error())
+							return
+						}
 						chainIDS = append(chainIDS, chainID)
 					}
 					// Set the structs cert and chain parameters.

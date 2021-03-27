@@ -50,7 +50,7 @@ func InsertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo)
 }
 
 // Makes one insertion into MongoDB
-func InsertChainIntoDB(client mongo.Client, cancel context.CancelFunc, chain ChainCertPem) (objectID string) {
+func InsertChainIntoDB(client mongo.Client, cancel context.CancelFunc, chain ChainCertPem) (objectID string, err error) {
 
 	// If, for any reason, the Chain certificate is empty,
 	// we return.
@@ -61,12 +61,11 @@ func InsertChainIntoDB(client mongo.Client, cancel context.CancelFunc, chain Cha
 	// We check if the CertChainPem already is stored in the DB.
 	chainInDB, err := isChainInDB(chain.PEM, &client)
 	if err != nil {
-		fmt.Printf("Error checking if cert is in db: %v", err.Error())
-		return ""
+		return "", err
 	}
 	if chainInDB != "" {
 		fmt.Printf("Cert is already in DB\n")
-		return chainInDB
+		return chainInDB, nil
 	}
 
 	// For unique chain certs, we push them to our DB to the dbChainCollection
@@ -77,12 +76,12 @@ func InsertChainIntoDB(client mongo.Client, cancel context.CancelFunc, chain Cha
 	//Actual insert to MongoDB. Could possibly be done in batches for better performance
 	res, err := collection.InsertOne(ctx, chain)
 	if err != nil {
-		fmt.Print("Error inserting chain cert into DB.\n")
+		return "", err
 	}
 	// If we are successful inserting, we return the
 	id := res.InsertedID
 	idString := id.(primitive.ObjectID).Hex()
-	return idString
+	return idString, nil
 }
 
 // This will iterate though all certs in 
