@@ -140,37 +140,36 @@ func main() {
 			}
 
 			go func() {
-				if CTlog != "" {
-					certificate, chain, err := DownloadCertsFromCT(CertIndex, CTlog)
+				certificate, chain, err := DownloadCertsFromCT(CertIndex, CTlog)
+				if err != nil {
+					fmt.Printf("Error downloading certs: %q\n", err.Error())
+					counter++
+					return
+				}
+
+				var chainIDS []string
+				// For the cert chain, we try to insert these
+				// into the DB and append all associated chain certs
+				// to []chainIDS.
+				for _, entry := range chain {
+					chainID, err := InsertChainCertIntoDB(*client, cancel, ChainCertPem{
+						PEM: entry,
+					})
 					if err != nil {
-						fmt.Printf("Error downloading certs: %q\n", err.Error())
-						counter++
+						fmt.Printf("Error inserting chain cert into DB: %v", err.Error())
 						return
 					}
-
-					var chainIDS []string
-					// For the cert chain, we try to insert these
-					// into the DB and append all associated chain certs
-					// to []chainIDS.
-					for _, entry := range chain {
-						chainID, err := InsertChainCertIntoDB(*client, cancel, ChainCertPem{
-							PEM: entry,
-						})
-						if err != nil {
-							fmt.Printf("Error inserting chain cert into DB: %v", err.Error())
-							return
-						}
-						chainIDS = append(chainIDS, chainID)
-					}
-					// Set the structs cert and chain parameters.
-					// then push it to the DB
-					cert.Certificate = certificate
-					cert.Chain = chainIDS
+					chainIDS = append(chainIDS, chainID)
+				}
+				// Set the structs cert and chain parameters.
+				// then push it to the DB
+				cert.Certificate = certificate
+				cert.Chain = chainIDS
 				err = InsertCertIntoDB(*client, cancel, cert)
 				if err != nil {
 					fmt.Printf("Error inserting cert into DB: %v", err.Error())
 				}
-				fmt.Printf("Error counter: %d\n", counter)
+			fmt.Printf("Error counter: %d\n", counter)
 			}()
 
 			//dev-prints:
