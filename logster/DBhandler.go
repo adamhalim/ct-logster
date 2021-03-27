@@ -133,12 +133,12 @@ func IterateAllCerts() {
 					wg.Add(1)
 					go func() {
 						defer wg.Done()
-						_, chain, err := GetCertChain(indexStr, urlStr)
+						_, chain, err := GetChainCert(indexStr, urlStr)
 						if err != nil {
 							fmt.Printf("Error getting Cert Chain: %v", err.Error())
 							return
 						}
-						certificates, err := DecodePem(chain)
+						certificates, err := DecodePemsToX509(chain)
 						if err != nil {
 							fmt.Printf("%s", err.Error())
 						}

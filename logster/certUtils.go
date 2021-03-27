@@ -65,7 +65,8 @@ func GetLogClient(url string) client.LogClient {
 
 // This function will contact a CT log and retrieve
 // the certificate and its certificate chain
-func GetCertChain(index string, url string) (cert string, chain string, err error) {
+// ----- This function is no longer used! -----
+func GetChainCert(index string, url string) (cert string, chain string, err error) {
 	// Executes the ctclient from https://github.com/google/certificate-transparency-go
 	// Assumes ctclient.go is compiled and binary (./ctclient) is in same directory as this file
 	cmd, err := exec.Command("./ctclient", fmt.Sprintf("-first=%v", index), fmt.Sprintf("-last=%v", index), "-chain=true", "-text=false", fmt.Sprintf("-log_uri=https://%v", url), "getentries").Output()
@@ -96,7 +97,7 @@ func GetCertChain(index string, url string) (cert string, chain string, err erro
 // from https://gist.github.com/laher/5795578.
 // Takes a PEM string and will decode
 // and return all X509 certs
-func DecodePem(certInput string) (certs []x509.Certificate, err error) {
+func DecodePemsToX509(certInput string) (certs []x509.Certificate, err error) {
 	chainz := getTlsCert(certInput)
 	parsedCerts := []x509.Certificate{}
 
@@ -129,7 +130,7 @@ func getTlsCert(certInput string) tls.Certificate {
 // Given the CT log and index, this function will
 // download the associated certificate(s) and return them
 // as PEM strings
-func DownloadCertFromCT(index int, url string) (cert string, chain []string, err error) {
+func DownloadCertsFromCT(index int, url string) (cert string, chain []string, err error) {
 	urlPadding := "https://" + url
 
 	logClient := GetLogClient(urlPadding)

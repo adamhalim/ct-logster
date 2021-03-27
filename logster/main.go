@@ -141,7 +141,7 @@ func main() {
 
 			go func() {
 				if CTlog != "" {
-					certificate, chain, err := DownloadCertFromCT(CertIndex, CTlog)
+					certificate, chain, err := DownloadCertsFromCT(CertIndex, CTlog)
 					if err != nil {
 						fmt.Printf("Error downloading certs: %q\n", err.Error())
 						counter++
