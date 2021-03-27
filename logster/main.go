@@ -153,7 +153,7 @@ func main() {
 					// into the DB and append all associated chain certs
 					// to []chainIDS.
 					for _, entry := range chain {
-						chainID, err := InsertChainIntoDB(*client, cancel, ChainCertPem{
+						chainID, err := InsertChainCertIntoDB(*client, cancel, ChainCertPem{
 							PEM: entry,
 						})
 						if err != nil {

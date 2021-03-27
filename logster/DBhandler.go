@@ -50,7 +50,7 @@ func InsertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo)
 }
 
 // Makes one insertion into MongoDB
-func InsertChainIntoDB(client mongo.Client, cancel context.CancelFunc, chain ChainCertPem) (objectID string, err error) {
+func InsertChainCertIntoDB(client mongo.Client, cancel context.CancelFunc, chain ChainCertPem) (objectID string, err error) {
 
 	// If, for any reason, the Chain certificate is empty,
 	// we return.
