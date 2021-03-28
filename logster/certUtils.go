@@ -172,6 +172,7 @@ func DownloadCertsFromCT(index int, url string) (cert string, chain []string, er
 
 // Given the CT log and index, this function will
 // download the associated certificate(s) and return them
+// as CertWithIndex structs. CertWithIndex contains the PEM
 // cert as string as well as it's CT log index
 func DownloadManyCertsFromCT(startIndex uint64, endIndex uint64, url string) (cert []CertWithIndex, chain [][]string, err error) {
 
@@ -186,8 +187,9 @@ func DownloadManyCertsFromCT(startIndex uint64, endIndex uint64, url string) (ce
 	currIndex := int64(startIndex)
 	var certs []CertWithIndex
 	var PEMchain [][]string
-	// Iterate through all entires (we only really get one at a time,
-	// so this loop will only be ran once)
+	// Iterate through all entires CT log entires (and 
+	// decode each entry to get it's cert + the chain.
+	//
 	for _, entries := range entries.Entries {
 		logentry, _ := ct.RawLogEntryFromLeaf(currIndex, &entries)
 		if logentry != nil {
@@ -206,6 +208,7 @@ func DownloadManyCertsFromCT(startIndex uint64, endIndex uint64, url string) (ce
 			default:
 				fmt.Printf("Unhandled log entry type %d\n", ts.EntryType)
 			}
+			// Append each chain cert to a slice
 			var certPemChain []string
 			for _, c := range logentry.Chain {
 				certPemChain = append(certPemChain, getPEMdata(c.Data))
