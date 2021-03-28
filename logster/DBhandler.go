@@ -17,7 +17,7 @@ import (
 
 
 var dbUsername, dbPassword, dbIp, dbPort string
-const database, collection = "dev", "certTestRee"
+const database, dbCollection = "dev", "certTestRee"
 
 // Loads .env file
 func init() {
@@ -34,7 +34,7 @@ func init() {
 // Makes one insertion into MongoDB
 func InsertIntoDB(client mongo.Client, ctx context.Context, cancel context.CancelFunc, cert CertInfo) {
 
-	collection := client.Database("dev").Collection("certTestThree")
+	collection := client.Database(database).Collection(dbCollection)
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -68,7 +68,7 @@ func IterateAllCerts() {
 
 	fmt.Println("Connected to MongoDB Server: " + dbIp + ".")
 
-	col := client.Database(database).Collection(collection)
+	col := client.Database(database).Collection(dbCollection)
 	cursor, err := col.Find(context.TODO(), bson.D{})
 	if err != nil {
 		fmt.Println("Finding all documents ERROR:", err)
@@ -142,7 +142,7 @@ func IterateBlock(blockTime int){
 	// Here's an array in which you can store the decoded documents
 	var res []*CertInfo
 
-	col := client.Database(database).Collection(collection)
+	col := client.Database(database).Collection(dbCollection)
 
 	// Passing bson.D{{}} as the filter matches all documents in the collection
 	cur, err := col.Find(context.TODO(), bson.D{{"Time", blockTime}}, findOptions)
@@ -175,4 +175,55 @@ func IterateBlock(blockTime int){
 	for _,entry := range res{
 		fmt.Println(entry)
 	}
+}
+//status should only be: Good, Unknown, Revoked or Unexcpected.
+//Unexcpeted will probably be handled earlier in code. But should still be handled here too
+func AppendNewStatus(client mongo.Client, cancel context.CancelFunc, certID string, changeTime time.Time, status string){
+    collection := client.Database("dev").Collection(dbCollection)
+    ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+
+    // Read Once
+    var res CertInfo
+
+    err := collection.FindOne(ctx, bson.M{"_id": certID}).Decode(&res)
+    if err != nil{
+        fmt.Println("Error finding certID")
+        return
+    }
+
+    var update bool = false
+    s := len(res.Changes)
+
+    if s > 0{
+        lastElem := res.Changes[s-1]
+        if lastElem.Status != status{
+            newEntry := StatusUpdate{status, changeTime}
+            res.Changes = append(res.Changes, newEntry)
+            update = true
+        }
+    }else {
+        if status != "Good"{
+            newEntry := StatusUpdate{status, changeTime}
+            res.Changes = append(res.Changes, newEntry)
+            update = true
+        }
+    }
+
+    //Actual update to MongoDB. Could possibly be done in batches for better performance
+    if update{
+        filter := bson.M{"_id":certID}
+        change, err := bson.Marshal(res)
+        if err != nil {
+            fmt.Println("Error when using bson.Marshal.")
+            fmt.Println(err)
+        }
+
+        _, err = collection.UpdateOne(ctx, filter, change)
+        if err != nil{
+            fmt.Println("Error when trying to update document")
+            fmt.Println(err)
+        }
+    }
 }

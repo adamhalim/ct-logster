@@ -16,14 +16,20 @@ import (
 )
 
 type CertInfo struct {
-	CertIndex    int      `bson:"certIndex"`
-	SerialNumber string   `bson:"serialNumber"`
-	Domain       []string `bson:"domains"`
-	OCSP         string   `bson:"OCSP,omitempty"`
-	CRL          string   `bson:"CRL,omitempty"`
-	CTlog        string   `bson:"ctLog"`
-	Certificate  string   `bson:"cert,omitempty"`
-	Chain        string   `bson:"certChain,omitempty"`
+	CertIndex    int      		`bson:"certIndex"`
+	SerialNumber string   		`bson:"serialNumber"`
+	Domain       []string 		`bson:"domains"`
+	OCSP         string   		`bson:"OCSP,omitempty"`
+	CRL          string   		`bson:"CRL,omitempty"`
+	CTlog        string   		`bson:"ctLog"`
+	Certificate  string   		`bson:"cert,omitempty"`
+	Chain        string   		`bson:"certChain,omitempty"`
+	Changes 	 []StatusUpdate `bson:"certChain,omitempty"`
+}
+
+type StatusUpdate struct{
+	Status 	string
+	Time 	time.Time
 }
 
 // Loads .env file
