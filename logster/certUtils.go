@@ -19,6 +19,7 @@ import (
 	"github.com/google/certificate-transparency-go/jsonclient"
 )
 
+}
 var once sync.Once
 var lock = &sync.Mutex{}
 var ctx context.Context
@@ -163,6 +164,56 @@ func DownloadCertsFromCT(index int, url string) (cert string, chain []string, er
 		}
 	}
 	return "", nil, errors.New("No CT log entires found.")
+}
+
+// Given the CT log and index, this function will
+// download the associated certificate(s) and return them
+// as PEM strings
+func DownloadManyCertsFromCT(startIndex uint64, endIndex uint64, url string) (cert []CertWithIndex, chain [][]string, err error) {
+
+	logClient := GetLogClient(url)
+	starti64 := int64(startIndex)
+	endi64 := int64(endIndex)
+	entries, err := logClient.GetRawEntries(context.Background(), starti64, endi64)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	currIndex := int64(startIndex)
+	var certs []CertWithIndex
+	var PEMchain [][]string
+	// Iterate through all entires (we only really get one at a time,
+	// so this loop will only be ran once)
+	for _, entries := range entries.Entries {
+		logentry, _ := ct.RawLogEntryFromLeaf(currIndex, &entries)
+		if logentry != nil {
+			ts := logentry.Leaf.TimestampedEntry
+			switch ts.EntryType {
+			case ct.X509LogEntryType:
+				certs = append(certs, CertWithIndex{
+					PEM:  getPEMdata(ts.X509Entry.Data),
+					Index: logentry.Index,
+				})
+			case ct.PrecertLogEntryType:
+				certs = append(certs, CertWithIndex{
+					PEM: getPEMdata(logentry.Cert.Data),
+					Index: logentry.Index,
+				} )
+			default:
+				fmt.Printf("Unhandled log entry type %d\n", ts.EntryType)
+			}
+			var certPemChain []string
+			for _, c := range logentry.Chain {
+				certPemChain = append(certPemChain, getPEMdata(c.Data))
+			}
+			PEMchain = append(PEMchain, certPemChain)
+		}
+		currIndex++
+	}
+	if len(certs) > 0 {
+		return certs, PEMchain, nil
+	}
+	return nil, nil, errors.New("No CT log entires found.")
 }
 
 // Will take raw data and decode it to a
