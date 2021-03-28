@@ -43,7 +43,7 @@ func InsertCertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertI
 	defer cancel()
 
 	//Actual insert to MongoDB. Could possibly be done in batches for better performance
-	_, err := collection.InsertOne(ctx, cert)
+	_, err := collection.InsertOne(context.Background(), cert)
 	if err != nil {
 		return err
 	}
