@@ -38,7 +38,7 @@ func init() {
 // Makes one insertion into MongoDB
 func InsertCertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo) error{
 
-	collection := client.Database("dev").Collection("certTestThree")
+	collection := client.Database(dbName).Collection(dbCollection)
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
