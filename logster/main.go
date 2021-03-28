@@ -24,7 +24,7 @@ type CertInfo struct {
 	CTlog        string   		`bson:"ctLog"`
 	Certificate  string   		`bson:"cert,omitempty"`
 	Chain        string   		`bson:"certChain,omitempty"`
-	Changes 	 []StatusUpdate `bson:"certChain,omitempty"`
+	Changes 	 []StatusUpdate `bson:"changes"`
 }
 
 type StatusUpdate struct{
