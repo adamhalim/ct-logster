@@ -19,7 +19,11 @@ import (
 	"github.com/google/certificate-transparency-go/jsonclient"
 )
 
+type CertWithIndex struct {
+	PEM  string
+	Index int64
 }
+
 var once sync.Once
 var lock = &sync.Mutex{}
 var ctx context.Context
@@ -168,7 +172,7 @@ func DownloadCertsFromCT(index int, url string) (cert string, chain []string, er
 
 // Given the CT log and index, this function will
 // download the associated certificate(s) and return them
-// as PEM strings
+// cert as string as well as it's CT log index
 func DownloadManyCertsFromCT(startIndex uint64, endIndex uint64, url string) (cert []CertWithIndex, chain [][]string, err error) {
 
 	logClient := GetLogClient(url)
