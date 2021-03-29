@@ -1,6 +1,7 @@
-package main
+package revocado
 
 import (
+	"fmt"
 	"bytes"
 	"encoding/base64"
 	"crypto/x509"
@@ -8,21 +9,26 @@ import (
 	"io/ioutil"
 	"net/http"
 	"errors"
+	"math/big"
+	"encoding/asn1"
+	"crypto/x509/pkix"
+	"crypto"
+	"math/rand"
 )
 
 
-func GetOCSP(url string, req []byte, issuer *x509.Certificate) (status byte, err error){
+func GetOCSP(url string, issuer *x509.Certificate) (status string, err error){
 
-	ocspResp, err := sendOCSPRequest(url, req, issuer)
+	ocspResp, err := randomSerialTest(url, issuer)
 
 	if ocspResp.Status == ocsp.Good {
-		return 0, nil
+		return "Good", nil
 	} else if ocspResp.Status == ocsp.Unknown {
-		return 1, nil
+		return "Unknown", nil
 	} else if ocspResp.Status == ocsp.Revoked {
-		return 2, nil
+		return "Revoked", nil
 	} else {
-		return 3, nil
+		return "Unexcpected", nil
 	}
 }
 
@@ -54,4 +60,42 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
     resp.Body.Close()
 
     return ocsp.ParseResponse(body, issuer)
+}
+
+func randomSerialTest(url string, issuer *x509.Certificate)  (ocspResponse *ocsp.Response, err error){
+	var publicKeyInfo struct {
+		Algorithm pkix.AlgorithmIdentifier
+		PublicKey asn1.BitString
+	}
+	_, err = asn1.Unmarshal(issuer.RawSubjectPublicKeyInfo, &publicKeyInfo)
+	if err != nil{
+		fmt.Println("Error unmarshaling ASN1 info")
+	}
+
+	var ocsp_req ocsp.Request
+	ocsp_req.HashAlgorithm = crypto.Hash(crypto.SHA1)
+	h := ocsp_req.HashAlgorithm.New()
+	h.Write(publicKeyInfo.PublicKey.RightAlign())
+	ocsp_req.IssuerKeyHash = h.Sum(nil)
+
+	h.Reset()
+	h.Write(issuer.RawSubject)
+	ocsp_req.IssuerNameHash = h.Sum(nil)
+
+	random_serial := [20]byte{}
+	copy(random_serial[:], "crt.sh")
+	_, err = rand.Read(random_serial[6:])
+	if err != nil{
+		fmt.Println("Error reading random serial")
+	}
+
+	ocsp_req.SerialNumber = big.NewInt(0)
+	ocsp_req.SerialNumber.SetBytes(random_serial[:])
+
+	ocsp_req_bytes, err := ocsp_req.Marshal()
+	if err != nil{
+		fmt.Println("Rip request bytes")
+	}
+
+	return sendOCSPRequest(url, ocsp_req_bytes, issuer)
 }

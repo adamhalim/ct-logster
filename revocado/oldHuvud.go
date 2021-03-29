@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 
+	"ct_logster/main"
+
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
-	"time"
+	//"time"
 
 	"github.com/joho/godotenv"
 	/*"go.mongodb.org/mongo-driver/mongo"
@@ -32,12 +34,15 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 }
 
-func notHuvud() {
+func main() {
 
+	IterateBlock(11)
+
+/*
 	//cronjobs start
 	log.Info("Create new cron")
 	c := cron.New()
-	c.AddFunc("*/1 * * * *", gruntWork)
+	c.AddFunc("/1 * * * *", gruntWork)
 
 	// Start cron with one scheduled job
 	log.Info("Start cron")
@@ -45,6 +50,7 @@ func notHuvud() {
 	printCronEntries(c.Entries())
 
 	time.Sleep(5 * time.Minute)
+*/
 }
 
 //Should should be scheduled by main as cronjob?
