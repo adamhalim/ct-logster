@@ -16,15 +16,21 @@ import (
 )
 
 type CertInfo struct {
-	CertIndex    int      `bson:"certIndex"`
-	SerialNumber string   `bson:"serialNumber"`
-	Domain       []string `bson:"domains"`
-	OCSP         string   `bson:"OCSP,omitempty"`
-	CRL          string   `bson:"CRL,omitempty"`
-	CTlog        string   `bson:"ctLog"`
-	Certificate  string   `bson:"cert,omitempty"`
-	Chain        []string `bson:"certChain,omitempty"`
-	Time         int      `bson:"Time"`
+	CertIndex    int      		`bson:"certIndex"`
+	SerialNumber string   		`bson:"serialNumber"`
+	Domain       []string 		`bson:"domains"`
+	OCSP         string   		`bson:"OCSP,omitempty"`
+	CRL          string   		`bson:"CRL,omitempty"`
+	CTlog        string   		`bson:"ctLog"`
+	Certificate  string   		`bson:"cert,omitempty"`
+	Chain        []string 		`bson:"certChain,omitempty"`
+	Time         int      		`bson:"Time"`
+	Change		 []StatusUpdate `bson:"Change"`
+}
+
+type StatusUpdate struct{
+	Status 	string
+	Time 	time.Time
 }
 
 type ChainCertPem struct {

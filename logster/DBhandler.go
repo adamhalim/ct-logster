@@ -244,3 +244,54 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 	}
 	return "", nil
 }
+//status should only be: Good, Unknown, Revoked or Unexcpected.
+//Unexcpeted will probably be handled earlier in code. But should still be handled here too
+func AppendNewStatus(client mongo.Client, cancel context.CancelFunc, certID string, changeTime time.Time, status string){
+    collection := client.Database("dev").Collection(dbCollection)
+    ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+
+    // Read Once
+    var res CertInfo
+
+    err := collection.FindOne(ctx, bson.M{"_id": certID}).Decode(&res)
+    if err != nil{
+        fmt.Println("Error finding certID")
+        return
+    }
+
+    var update bool = false
+    s := len(res.Changes)
+
+    if s > 0{
+        lastElem := res.Changes[s-1]
+        if lastElem.Status != status{
+            newEntry := StatusUpdate{status, changeTime}
+            res.Changes = append(res.Changes, newEntry)
+            update = true
+        }
+    }else {
+        if status != "Good"{
+            newEntry := StatusUpdate{status, changeTime}
+            res.Changes = append(res.Changes, newEntry)
+            update = true
+        }
+    }
+
+    //Actual update to MongoDB. Could possibly be done in batches for better performance
+    if update{
+        filter := bson.M{"_id":certID}
+        change, err := bson.Marshal(res)
+        if err != nil {
+            fmt.Println("Error when using bson.Marshal.")
+            fmt.Println(err)
+        }
+
+        _, err = collection.UpdateOne(ctx, filter, change)
+        if err != nil{
+            fmt.Println("Error when trying to update document")
+            fmt.Println(err)
+        }
+    }
+}
