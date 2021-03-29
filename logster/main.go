@@ -50,7 +50,7 @@ func init() {
 	dbPort = os.Getenv("PORT")
 }
 
-func main() {
+func mains() {
 	counter := 0
 	// The false flag specifies that we want heartbeat messages.
 	stream, errStream := certstream.CertStreamEventStream(false)
