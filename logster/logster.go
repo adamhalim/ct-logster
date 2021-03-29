@@ -184,6 +184,15 @@ func main() {
 
 			cert, chain, err := DownloadManyCertsFromCT(CTLogs[ind].currentIndex, currSTH, CTLogs[ind].logClient.BaseURI())
 
+			// Sometimes, the tree size updates before the
+			// get-entries endpoint does, meaning we try to
+			// download entries that are not yet updated.
+			if len(cert) == 0 {
+				fmt.Printf("No certs downloaded, retrying later...\n")
+				CTLogs[ind].inUse = false
+				return
+			}
+
 			// Here, we go through each chain certificate and filter out all
 			// duplicates. []uniqueCerts now only contains unique chain certs
 			// This massively increases performance, as we need to do less checks
