@@ -16,20 +16,19 @@ import (
 )
 
 type CertInfo struct {
-	CertIndex    int      		`bson:"certIndex"`
-	SerialNumber string   		`bson:"serialNumber"`
-	Domain       []string 		`bson:"domains"`
-	OCSP         string   		`bson:"OCSP,omitempty"`
-	CRL          string   		`bson:"CRL,omitempty"`
-	CTlog        string   		`bson:"ctLog"`
-	Certificate  string   		`bson:"cert,omitempty"`
-	Chain        string   		`bson:"certChain,omitempty"`
-	Changes 	 []StatusUpdate `bson:"changes"`
+	CertIndex    int      `bson:"certIndex"`
+	SerialNumber string   `bson:"serialNumber"`
+	Domain       []string `bson:"domains"`
+	OCSP         string   `bson:"OCSP,omitempty"`
+	CRL          string   `bson:"CRL,omitempty"`
+	CTlog        string   `bson:"ctLog"`
+	Certificate  string   `bson:"cert,omitempty"`
+	Chain        []string `bson:"certChain,omitempty"`
+	Time         int      `bson:"Time"`
 }
 
-type StatusUpdate struct{
-	Status 	string
-	Time 	time.Time
+type ChainCertPem struct {
+	PEM string `bson:"pem"`
 }
 
 // Loads .env file
@@ -37,6 +36,7 @@ func init() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
+		os.Exit(0)
 	}
 	dbUsername = os.Getenv("USERNAME")
 	dbPassword = os.Getenv("PASSWORD")
@@ -136,24 +136,40 @@ func main() {
 				OCSP:         OCSP,
 				CRL:          CRL,
 				CTlog:        CTlog,
+				Time:         time.Now().Hour(),
 			}
 
 			go func() {
-				if CTlog != "" {
-					chain, err := DownloadCertFromCT(CertIndex, CTlog)
-					if err != nil {
-						fmt.Printf("ErrorSWAG: %q\n", err.Error())
-						counter++
-					}
-					if chain != "" {
-					}
-					cert.Chain = chain
-					InsertIntoDB(*client, ctx, cancel, cert)
-
-				} else {
-					InsertIntoDB(*client, ctx, cancel, cert)
+				certificate, chain, err := DownloadCertsFromCT(CertIndex, CTlog)
+				if err != nil {
+					fmt.Printf("Error downloading certs: %q\n", err.Error())
+					counter++
+					return
 				}
-				fmt.Printf("Error counter: %d\n", counter)
+
+				var chainIDS []string
+				// For the cert chain, we try to insert these
+				// into the DB and append all associated chain certs
+				// to []chainIDS.
+				for _, entry := range chain {
+					chainID, err := InsertChainCertIntoDB(*client, cancel, ChainCertPem{
+						PEM: entry,
+					})
+					if err != nil {
+						fmt.Printf("Error inserting chain cert into DB: %v", err.Error())
+						return
+					}
+					chainIDS = append(chainIDS, chainID)
+				}
+				// Set the structs cert and chain parameters.
+				// then push it to the DB
+				cert.Certificate = certificate
+				cert.Chain = chainIDS
+				err = InsertCertIntoDB(*client, cancel, cert)
+				if err != nil {
+					fmt.Printf("Error inserting cert into DB: %v", err.Error())
+				}
+			fmt.Printf("Error counter: %d\n", counter)
 			}()
 
 			//dev-prints:
