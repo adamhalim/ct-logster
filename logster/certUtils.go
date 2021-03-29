@@ -20,7 +20,7 @@ import (
 )
 
 type CertWithIndex struct {
-	PEM  string
+	PEM   string
 	Index int64
 }
 
@@ -183,7 +183,7 @@ func DownloadManyCertsFromCT(startIndex uint64, endIndex uint64, url string) (ce
 	var PEMchain [][]string
 
 	// When querying the CT logs, we don't necessarily get all entires
-	// from one request. Therefore, after each request, we need  to 
+	// from one request. Therefore, after each request, we need  to
 	// increment our starting index with as many results as we got
 	// from the previous query. We do this until we get all entires.
 	for starti64 <= endi64 {
@@ -193,8 +193,6 @@ func DownloadManyCertsFromCT(startIndex uint64, endIndex uint64, url string) (ce
 		}
 
 		currIndex := starti64
-		// Iterate through all entires CT log entires (and
-	// Iterate through all entires CT log entires (and 
 		// Iterate through all entires CT log entires (and
 		// decode each entry to get it's cert + the chain.
 		for _, entries := range entries.Entries {
