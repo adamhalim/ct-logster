@@ -20,6 +20,11 @@ type CTLog struct {
 	inUse        bool
 }
 
+type ChainCertIndex struct {
+	PEM   string `bson:"pem"`
+	Index string
+}
+
 var logs []string
 var CTLogs []CTLog
 
@@ -208,28 +213,23 @@ func main() {
 				}
 			}
 
-			var chainIDS []string
+			// Map all chain certificates with their
+			// index in the DB
+			var certIDS []ChainCertIndex
 			for _, entry := range uniqueCerts {
 				chainID, err := InsertChainCertIntoDB(*client, cancel, ChainCertPem{
 					PEM: entry,
+				})
+				certIDS = append(certIDS, ChainCertIndex{
+					PEM:   entry,
+					Index: chainID,
 				})
 				if err != nil {
 					fmt.Printf("Error inserting chain cert into DB: %v", err.Error())
 					CTLogs[ind].inUse = false
 					return
 				}
-				chainIDS = append(chainIDS, chainID)
 			}
-
-			// Sometimes, the tree size updates before the 
-			// get-entries endpoint does, meaning we try to 
-			// download entries that are not yet updated.
-			if len(cert) == 0 {
-				fmt.Printf("No certs downloaded, retrying later...\n")
-				CTLogs[ind].inUse = false
-				return
-			}
-
 			// Ensure that we downlaod the exact amount of entries
 			// that we specified
 			diff := currSTH - CTLogs[ind].currentIndex
@@ -273,7 +273,18 @@ func main() {
 						certificate.OCSP = x509ParsedCert[0].OCSPServer[0]
 					}
 
-					certificate.Chain = chainIDS
+					// For each chain cert in the entry, we take the 
+					// corresponding MongoDB ID that we acquired earlier
+					var uniqueIDs []string
+					for _, uniqueCert := range certIDS {
+						for _, chainCert := range chain[loopIndex] {
+							if uniqueCert.PEM == chainCert {
+								uniqueIDs = append(uniqueIDs, uniqueCert.Index)
+							}
+						}						
+					}
+					
+					certificate.Chain = uniqueIDs
 					certificate.Certificate = cert[loopIndex].PEM
 					err = InsertCertIntoDB(*client, cancel, certificate)
 					if err != nil {
@@ -284,13 +295,13 @@ func main() {
 				}(i)
 			}
 			counter += currSTH - CTLogs[ind].currentIndex + 1
-			// We only increment our currentIndex if everything is 
+			// We only increment our currentIndex if everything is
 			// succesful. If anything fails, we don't update it.
 			// This will result in duplicate entries if we exit
 			// out midway through inserting the certificates.
 
-			// TODO: Might be worth to implement some kind of logic 
-			// to prevent this. Since insertion is done 
+			// TODO: Might be worth to implement some kind of logic
+			// to prevent this. Since insertion is done
 			// synchronously, we could return the index for
 			// each successful entry perhaps and update each entry?
 			// Another option is doing insertion in batches.
