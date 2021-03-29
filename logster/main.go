@@ -25,7 +25,7 @@ type CertInfo struct {
 	Certificate  string   		`bson:"cert,omitempty"`
 	Chain        []string 		`bson:"certChain,omitempty"`
 	Time         int      		`bson:"Time"`
-	Change		 []StatusUpdate `bson:"Change"`
+	Changes		 []StatusUpdate `bson:"Change"`
 }
 
 type StatusUpdate struct{
