@@ -198,6 +198,16 @@ func main() {
 				return
 			}
 
+			// If, for whatever reason, the amount of certificates downloaded
+			// isn't the same as the updated tree size - current index, we
+			// failed to download all certificates and should try again later.
+			// This makes the above len(cert) == 0 check redundant, but
+			// I'll leave it here for debugging/logging
+			if uint64(len(cert)) != (currSTH-CTLogs[ind].currentIndex)+1 {
+				fmt.Printf("Wrong amount of certs downloaded, retrying later...\n")
+				return
+			}
+
 			// Here, we go through each chain certificate and filter out all
 			// duplicates. []uniqueCerts now only contains unique chain certs
 			// This massively increases performance, as we need to do less checks
