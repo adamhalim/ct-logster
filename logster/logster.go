@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/google/certificate-transparency-go/client"
@@ -17,7 +18,7 @@ type CTLog struct {
 	logClient    client.LogClient
 	startIndex   uint64
 	currentIndex uint64
-	inUse        bool
+	logLock      *sync.Mutex
 }
 
 type ChainCertIndex struct {
@@ -107,6 +108,7 @@ func initLogClients() {
 			logClient:    logClient,
 			startIndex:   sth.TreeSize,
 			currentIndex: sth.TreeSize,
+			logLock:      &sync.Mutex{},
 		})
 	}
 }
@@ -169,15 +171,12 @@ func main() {
 		// to the current one, meaning we download all newly issued certificates
 		// for that CT log since the last time the routine was called
 		go func(ind int) {
-			if CTLogs[ind].inUse {
-				fmt.Printf("Log already in use.\n")
-				return
-			}
-			CTLogs[ind].inUse = true
+			CTLogs[ind].logLock.Lock()
+			defer CTLogs[ind].logLock.Unlock()
+
 			currSTH, err := updateTreeSize(CTLogs[ind])
 			if err != nil {
 				fmt.Printf("Error getting current tree size: %v", err.Error())
-				CTLogs[ind].inUse = false
 				return
 			}
 
@@ -236,7 +235,6 @@ func main() {
 				})
 				if err != nil {
 					fmt.Printf("Error inserting chain cert into DB: %v", err.Error())
-					CTLogs[ind].inUse = false
 					return
 				}
 			}
@@ -245,7 +243,6 @@ func main() {
 			diff := currSTH - CTLogs[ind].currentIndex
 			if int(diff) != len(cert)-1 {
 				fmt.Printf("Wrong amount of certs downloaded, retrying later...\n")
-				CTLogs[ind].inUse = false
 				return
 			}
 
@@ -258,7 +255,6 @@ func main() {
 					x509ParsedCert, err := DecodePemsToX509(cert[loopIndex].PEM)
 					if err != nil {
 						fmt.Printf("Error parsing certs to x509: %v", err.Error())
-						CTLogs[ind].inUse = false
 						return
 					}
 
@@ -299,7 +295,6 @@ func main() {
 					err = InsertCertIntoDB(*client, cancel, certificate)
 					if err != nil {
 						fmt.Printf("Error inserting cert into DB: %v", err.Error())
-						CTLogs[ind].inUse = false
 						return
 					}
 				}(i)
@@ -317,7 +312,6 @@ func main() {
 			// Another option is doing insertion in batches.
 			// We either insert all, or nothing.
 			CTLogs[ind].currentIndex = currSTH
-			CTLogs[ind].inUse = false
 		}(index)
 		index++
 		fmt.Printf("New certs: %d.\n", counter)
