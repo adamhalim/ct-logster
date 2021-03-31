@@ -151,7 +151,7 @@ func main() {
 
 	fmt.Println("Connected to MongoDB Server: " + dbIp + ".")
 
-	logTicker := time.NewTicker(200 * time.Millisecond)
+	logTicker := time.NewTicker(500 * time.Millisecond)
 
 	fmt.Println("logTimer fired")
 	index := 0
