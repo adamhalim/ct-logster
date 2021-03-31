@@ -19,6 +19,7 @@ type CTLog struct {
 	startIndex   uint64
 	currentIndex uint64
 	logLock      *sync.Mutex
+	inUse        bool
 }
 
 type ChainCertIndex struct {
@@ -109,6 +110,7 @@ func initLogClients() {
 			startIndex:   sth.TreeSize,
 			currentIndex: sth.TreeSize,
 			logLock:      &sync.Mutex{},
+			inUse:        false,
 		})
 	}
 }
@@ -165,6 +167,7 @@ func main() {
 	var counter uint64
 	elapsedTime := 0.0
 	start := time.Now()
+	for _ = range logTicker.C {
 		if index >= len(CTLogs) {
 			index = 0
 		}
@@ -175,17 +178,33 @@ func main() {
 		// to the current one, meaning we download all newly issued certificates
 		// for that CT log since the last time the routine was called
 		go func(ind int) {
+
+			// Here, we use a lock and check if 
+			// the CTLog already is in use. This guarantees 
+			// that code running after this check is only ran
+			// on at most one thread. We don't want to be running
+			// the same routine on the same CTLog if the previous one 
+			// hasn't finished running
 			CTLogs[ind].logLock.Lock()
-			defer CTLogs[ind].logLock.Unlock()
+			if CTLogs[ind].inUse {
+				fmt.Printf("Log already in use.\n")
+				CTLogs[ind].logLock.Unlock()
+				return
+			}
+
+			CTLogs[ind].inUse = true
+			CTLogs[ind].logLock.Unlock()
 
 			currSTH, err := updateTreeSize(CTLogs[ind])
 			if err != nil {
 				fmt.Printf("Error getting current tree size: %v", err.Error())
+				CTLogs[ind].inUse = false
 				return
 			}
 
 			if currSTH == CTLogs[ind].currentIndex {
 				fmt.Printf("Tree size unchanged, nothing to do.\n")
+				CTLogs[ind].inUse = false
 				return
 			}
 
@@ -195,7 +214,7 @@ func main() {
 			// get-entries endpoint does, meaning we try to
 			// download entries that are not yet updated.
 			if len(cert) == 0 {
-				fmt.Printf("No certs downloaded, retrying later...\n")
+				CTLogs[ind].inUse = false
 				return
 			}
 
@@ -206,6 +225,7 @@ func main() {
 			// I'll leave it here for debugging/logging
 			if uint64(len(cert)) != (currSTH-CTLogs[ind].currentIndex)+1 {
 				fmt.Printf("Wrong amount of certs downloaded, retrying later...\n")
+				CTLogs[ind].inUse = false
 				return
 			}
 
@@ -237,6 +257,7 @@ func main() {
 				})
 				if err != nil {
 					fmt.Printf("Error inserting chain cert into DB: %v", err.Error())
+					CTLogs[ind].inUse = false
 					return
 				}
 			}
@@ -245,6 +266,7 @@ func main() {
 			diff := currSTH - CTLogs[ind].currentIndex
 			if int(diff) != len(cert)-1 {
 				fmt.Printf("Wrong amount of certs downloaded, retrying later...\n")
+				CTLogs[ind].inUse = false
 				return
 			}
 
@@ -257,6 +279,7 @@ func main() {
 					x509ParsedCert, err := DecodePemsToX509(cert[loopIndex].PEM)
 					if err != nil {
 						fmt.Printf("Error parsing certs to x509: %v", err.Error())
+						CTLogs[ind].inUse = false
 						return
 					}
 
@@ -289,14 +312,15 @@ func main() {
 							if uniqueCert.PEM == chainCert {
 								uniqueIDs = append(uniqueIDs, uniqueCert.Index)
 							}
-						}						
+						}
 					}
-					
+
 					certificate.Chain = uniqueIDs
 					certificate.Certificate = cert[loopIndex].PEM
 					err = InsertCertIntoDB(*client, cancel, certificate)
 					if err != nil {
 						fmt.Printf("Error inserting cert into DB: %v", err.Error())
+						CTLogs[ind].inUse = false
 						return
 					}
 				}(i)
@@ -314,6 +338,7 @@ func main() {
 			// Another option is doing insertion in batches.
 			// We either insert all, or nothing.
 			CTLogs[ind].currentIndex = currSTH
+			CTLogs[ind].inUse = false
 		}(index)
 		index++
 		elapsedTime += 0.5
