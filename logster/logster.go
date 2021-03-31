@@ -28,29 +28,28 @@ type ChainCertIndex struct {
 }
 
 type CertInfo struct {
-	CertIndex    int      		`bson:"certIndex"`
-	SerialNumber string   		`bson:"serialNumber"`
-	Domain       []string 		`bson:"domains"`
-	OCSP         string   		`bson:"OCSP,omitempty"`
-	CRL          string   		`bson:"CRL,omitempty"`
-	CTlog        string   		`bson:"ctLog"`
-	Certificate  string   		`bson:"cert,omitempty"`
-	Chain        []string 		`bson:"certChain,omitempty"`
-	Time         int      		`bson:"Time"`
-	Changes		 []StatusUpdate `bson:"Change"`
+	CertIndex    int            `bson:"certIndex"`
+	SerialNumber string         `bson:"serialNumber"`
+	Domain       []string       `bson:"domains"`
+	OCSP         string         `bson:"OCSP,omitempty"`
+	CRL          string         `bson:"CRL,omitempty"`
+	CTlog        string         `bson:"ctLog"`
+	Certificate  string         `bson:"cert,omitempty"`
+	Chain        []string       `bson:"certChain,omitempty"`
+	Time         int            `bson:"Time"`
+	Changes      []StatusUpdate `bson:"Change"`
 }
 
 type ChainCertPem struct {
 	PEM string `bson:"pem"`
 }
 
-
 var logs []string
 var CTLogs []CTLog
 
 func init() {
 
-	test := []string{"ct.browser.360.cn/2021/",
+	ctLogURLs := []string{"ct.browser.360.cn/2021/",
 		"ct.browser.360.cn/2022/",
 		"ct.cloudflare.com/logs/nimbus2021/",
 		"ct.cloudflare.com/logs/nimbus2022/",
@@ -94,8 +93,7 @@ func init() {
 		"yeti2022.ct.digicert.com/log/",
 		"yeti2023.ct.digicert.com/log/"}
 
-	logs = test
-	//logs = []string{"oak.ct.letsencrypt.org/2021/"}
+	logs = ctLogURLs
 	initLogClients()
 
 	err := godotenv.Load()
@@ -197,11 +195,11 @@ func main() {
 		// for that CT log since the last time the routine was called
 		go func(ind int) {
 
-			// Here, we use a lock and check if 
-			// the CTLog already is in use. This guarantees 
+			// Here, we use a lock and check if
+			// the CTLog already is in use. This guarantees
 			// that code running after this check is only ran
 			// on at most one thread. We don't want to be running
-			// the same routine on the same CTLog if the previous one 
+			// the same routine on the same CTLog if the previous one
 			// hasn't finished running
 			CTLogs[ind].logLock.Lock()
 			if CTLogs[ind].inUse {
@@ -322,7 +320,7 @@ func main() {
 						certificate.OCSP = x509ParsedCert[0].OCSPServer[0]
 					}
 
-					// For each chain cert in the entry, we take the 
+					// For each chain cert in the entry, we take the
 					// corresponding MongoDB ID that we acquired earlier
 					var uniqueIDs []string
 					for _, uniqueCert := range certIDS {
