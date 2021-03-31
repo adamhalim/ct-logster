@@ -16,6 +16,10 @@ import (
 	"time"
 )
 
+type StatusUpdate struct{
+	Status 	string
+	Time 	time.Time
+}
 
 var dbUsername, dbPassword, dbIp, dbPort, dbName, dbCollection, dbChainCollection string
 

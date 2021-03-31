@@ -27,6 +27,24 @@ type ChainCertIndex struct {
 	Index string
 }
 
+type CertInfo struct {
+	CertIndex    int      		`bson:"certIndex"`
+	SerialNumber string   		`bson:"serialNumber"`
+	Domain       []string 		`bson:"domains"`
+	OCSP         string   		`bson:"OCSP,omitempty"`
+	CRL          string   		`bson:"CRL,omitempty"`
+	CTlog        string   		`bson:"ctLog"`
+	Certificate  string   		`bson:"cert,omitempty"`
+	Chain        []string 		`bson:"certChain,omitempty"`
+	Time         int      		`bson:"Time"`
+	Changes		 []StatusUpdate `bson:"Change"`
+}
+
+type ChainCertPem struct {
+	PEM string `bson:"pem"`
+}
+
+
 var logs []string
 var CTLogs []CTLog
 
