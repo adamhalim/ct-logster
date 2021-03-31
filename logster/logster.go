@@ -134,6 +134,9 @@ func updateTreeSize(ctlog CTLog) (uint64, error) {
 
 func main() {
 
+	// Used for dev-prints
+	DEBUG := true
+
 	// Establish connection to MongoDB
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -160,7 +163,8 @@ func main() {
 
 	// 1203840 - 1280163
 	var counter uint64
-	for _ = range logTicker.C{
+	elapsedTime := 0.0
+	start := time.Now()
 		if index >= len(CTLogs) {
 			index = 0
 		}
@@ -312,6 +316,10 @@ func main() {
 			CTLogs[ind].currentIndex = currSTH
 		}(index)
 		index++
-		fmt.Printf("New certs: %d.\n", counter)
+		elapsedTime += 0.5
+		if DEBUG {
+			fmt.Printf("New certs: %d.\n", counter)
+			fmt.Printf("Certs per second: %.2f\n", float32(counter)/float32(time.Since(start).Seconds()))
+		}
 	}
 }
