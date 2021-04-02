@@ -230,7 +230,7 @@ func main() {
 			// get-entries endpoint does, meaning we try to
 			// download entries that are not yet updated.
 			if len(cert) == 0 {
-				CTLogs[ind].inUse = false
+				fmt.Printf("No certs downloaded, retrying later...\n")
 				return
 			}
 
