@@ -7,8 +7,7 @@ import (
 	"os"
 	"time"
 	"sync"
-	"time"
-
+	
 	"github.com/google/certificate-transparency-go/client"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -222,7 +221,9 @@ func main() {
 				return
 			}
 
-			cert, chain, err := DownloadManyCertsFromCT(CTLogs[ind].currentIndex, currSTH, CTLogs[ind].logClient.BaseURI())
+			// Index start at 0, so we need to decrement the current tree size to get the last index.
+			// For example, for a tree size of 100, last entry has index 99.
+			cert, chain, err := DownloadManyCertsFromCT(CTLogs[ind].currentIndex, currSTH - 1, CTLogs[ind].logClient.BaseURI())
 
 			// Sometimes, the tree size updates before the
 			// get-entries endpoint does, meaning we try to
@@ -237,7 +238,7 @@ func main() {
 			// failed to download all certificates and should try again later.
 			// This makes the above len(cert) == 0 check redundant, but
 			// I'll leave it here for debugging/logging
-			if uint64(len(cert)) != (currSTH-CTLogs[ind].currentIndex)+1 {
+			if uint64(len(cert)) != (currSTH-CTLogs[ind].currentIndex) {
 				fmt.Printf("Wrong amount of certs downloaded, retrying later...\n")
 				return
 			}
@@ -320,7 +321,7 @@ func main() {
 					return
 				}
 			}
-			counter += currSTH - CTLogs[ind].currentIndex + 1
+			counter += currSTH - CTLogs[ind].currentIndex
 			// We only increment our currentIndex if everything is
 			// succesful. If anything fails, we don't update it.
 			// This will result in duplicate entries if we exit
