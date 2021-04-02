@@ -277,46 +277,50 @@ func main() {
 			// For each newly issued certificate, we parse them to *X509.Certificates
 			// and extract the data we want for our CertInfo struct.
 			for i := 0; i < len(cert); i++ {
-				func(loopIndex int) {
-					// We decode the PEM to a *x509.Certificate,to access
-					// the certificate's fields easily.
+				// We decode the PEM to a *x509.Certificate,to access
+				// the certificate's fields easily.
+				x509ParsedCert, err := DecodePemsToX509(cert[i].PEM)
+				if err != nil {
 					fmt.Printf("Error parsing certs to x509: %v", err.Error())
 					return
 				}
 
-					// Initialize structi with all fields
-					certificate := CertInfo{
-						CertIndex:    int(cert[loopIndex].Index),
-						SerialNumber: x509ParsedCert[0].SerialNumber.String(),
-						Domain:       x509ParsedCert[0].DNSNames,
-						Certificate:  cert[loopIndex].PEM,
-						Chain:        chain[loopIndex],
-						Time:         time.Now().Hour(),
-						CTlog:        CTLogs[ind].logClient.BaseURI(),
-					}
+				// Initialize structi with all fields
+				certificate := CertInfo{
+					CertIndex:    int(cert[i].Index),
+					SerialNumber: x509ParsedCert[0].SerialNumber.String(),
+					Domain:       x509ParsedCert[0].DNSNames,
+					Certificate:  cert[i].PEM,
+					Chain:        chain[i],
+					Time:         time.Now().Hour(),
+					CTlog:        CTLogs[ind].logClient.BaseURI(),
+				}
 
-					// Check for CRL URL
-					if len(x509ParsedCert[0].CRLDistributionPoints) > 0 {
-						certificate.CRL = x509ParsedCert[0].CRLDistributionPoints[0]
-					}
+				// Check for CRL URL
+				if len(x509ParsedCert[0].CRLDistributionPoints) > 0 {
+					certificate.CRL = x509ParsedCert[0].CRLDistributionPoints[0]
+				}
 
-					// Check for OCSP URL
-					if len(x509ParsedCert[0].OCSPServer) > 0 {
-						certificate.OCSP = x509ParsedCert[0].OCSPServer[0]
-					}
+				// Check for OCSP URL
+				if len(x509ParsedCert[0].OCSPServer) > 0 {
+					certificate.OCSP = x509ParsedCert[0].OCSPServer[0]
+				}
 
-					// For each chain cert in the entry, we take the
-					// corresponding MongoDB ID that we acquired earlier
-					var uniqueIDs []string
-					for _, uniqueCert := range certIDS {
-						for _, chainCert := range chain[loopIndex] {
-							if uniqueCert.PEM == chainCert {
-								uniqueIDs = append(uniqueIDs, uniqueCert.Index)
-							}
+				// For each chain cert in the entry, we take the
+				// corresponding MongoDB ID that we acquired earlier
+				var uniqueIDs []string
+				for _, uniqueCert := range certIDS {
+					for _, chainCert := range chain[i] {
+						if uniqueCert.PEM == chainCert {
+							uniqueIDs = append(uniqueIDs, uniqueCert.Index)
 						}
 					}
+				}
 
-					certificate.Chain = uniqueIDs
+				certificate.Chain = uniqueIDs
+				certificate.Certificate = cert[i].PEM
+				err = InsertCertIntoDB(*client, cancel, certificate)
+				if err != nil {
 					fmt.Printf("Error inserting cert into DB: %v", err.Error())
 					return
 				}
