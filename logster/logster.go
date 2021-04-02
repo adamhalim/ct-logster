@@ -277,15 +277,6 @@ func main() {
 					return
 				}
 			}
-			// Ensure that we downlaod the exact amount of entries
-			// that we specified
-			diff := currSTH - CTLogs[ind].currentIndex
-			if int(diff) != len(cert)-1 {
-				fmt.Printf("Wrong amount of certs downloaded, retrying later...\n")
-				CTLogs[ind].inUse = false
-				return
-			}
-
 			// For each newly issued certificate, we parse them to *X509.Certificates
 			// and extract the data we want for our CertInfo struct.
 			for i := 0; i < len(cert); i++ {
