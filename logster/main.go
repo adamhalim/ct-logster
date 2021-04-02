@@ -1,19 +1,20 @@
 package main
-
+//
 import (
 	"context"
 	"fmt"
 	"log"
 	"os"
+
 	"strings"
 	"time"
-
 	"github.com/CaliDog/certstream-go"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
+
 
 type CertInfo struct {
 	CertIndex    int      		`bson:"certIndex"`
@@ -22,7 +23,7 @@ type CertInfo struct {
 	OCSP         string   		`bson:"OCSP,omitempty"`
 	CRL          string   		`bson:"CRL,omitempty"`
 	CTlog        string   		`bson:"ctLog"`
-	Certificate  string   		`bson:"cert,omitempty"`
+ 	Certificate  string   		`bson:"cert,omitempty"`
 	Chain        []string 		`bson:"certChain,omitempty"`
 	Time         int      		`bson:"Time"`
 	Changes		 []StatusUpdate `bson:"Change"`

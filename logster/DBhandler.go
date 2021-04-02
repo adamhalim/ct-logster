@@ -8,6 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
+	revoc "../revocado"
+
 	"context"
 	"fmt"
 	"log"
@@ -177,10 +179,7 @@ func IterateBlock(blockTime int){
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
-	findOptions.SetLimit(20)
-
-	// Here's an array in which you can store the decoded documents
-	var res []*CertInfo
+	findOptions.SetLimit(1000)
 
 	col := client.Database(dbName).Collection(dbCollection)
 
@@ -189,19 +188,23 @@ func IterateBlock(blockTime int){
 	if err != nil {
 		fmt.Println("Error when collecting")
 	}
-
 	// Finding multiple documents returns a cursor
-	// Iterating through the cursor allows us to decode documents one at a time
+ 	// Iterating through the cursor allows us to decode documents one at a time
 	for cur.Next(context.TODO()) {
-
 		// create a value into which the single document can be decoded
-		var elem CertInfo
+		var elem bson.M
+		var certIn CertInfo
+
 		err := cur.Decode(&elem)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		res = append(res, &elem)
+		err = cur.Decode(&certIn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		//CALL METHOD TO CHECK OCSP?
+		checkOCSP(client, cancel, elem, certIn.Chain[0])
 	}
 	if err := cur.Err(); err != nil {
 		log.Fatal(err)
@@ -209,14 +212,44 @@ func IterateBlock(blockTime int){
 
 	// Close the cursor once finished
 	cur.Close(context.TODO())
-
-	fmt.Printf("Found multiple documents (array of pointers): %+v\n", res)
-
-	for _,entry := range res{
-		fmt.Println(entry)
-	}
 }
 
+func checkOCSP(client *mongo.Client, cancel context.CancelFunc, element bson.M, chainStringID string){
+	// convert id string to ObjectId
+	objID, err := primitive.ObjectIDFromHex(chainStringID)
+	if err != nil{
+		log.Println("Invalid id")
+	}
+
+	col2 := client.Database(dbName).Collection(dbChainCollection)
+	var result ChainCertPem
+	col2.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&result)
+
+
+	b, err := DecodePemsToX509(result.PEM)
+	if err != nil{
+		fmt.Println("B is fuk")
+	}
+
+	cert := element["cert"]
+	c, err := DecodePemsToX509(cert.(string))
+	if err != nil{
+		fmt.Println("C is fuk")
+	}
+
+	ocspURL := element["OCSP"]
+	elemID := element["_id"]
+	if len(b) != 0 && len(c) != 0{
+		if ocspURL != nil{
+			a, err :=revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
+			if err != nil{
+				fmt.Println(err)
+			}
+			rett := elemID.(primitive.ObjectID).Hex()
+			AppendNewStatus(client, cancel, rett, time.Now(), a)
+		}
+	}
+}
 // Checks whether a certificate already is in the cert chain DB.
 // We run this for every cert in the chain to avoid saving duplicates.
 // (A lot of certificates share chain certs)
@@ -246,19 +279,22 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 }
 //status should only be: Good, Unknown, Revoked or Unexcpected.
 //Unexcpeted will probably be handled earlier in code. But should still be handled here too
-func AppendNewStatus(client mongo.Client, cancel context.CancelFunc, certID string, changeTime time.Time, status string){
-    collection := client.Database("dev").Collection(dbCollection)
-    ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+func AppendNewStatus(client *mongo.Client, cancel context.CancelFunc, certID string, changeTime time.Time, status string){
+    collection := client.Database(dbName).Collection(dbCollection)
+    ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
     defer cancel()
-
 
     // Read Once
     var res CertInfo
-
-    err := collection.FindOne(ctx, bson.M{"_id": certID}).Decode(&res)
-    if err != nil{
+	theID, err2 := primitive.ObjectIDFromHex(certID)
+	if err2 != nil{
+		fmt.Println("error when converting certID to objectID")
+	}
+	err := collection.FindOne(ctx, bson.M{"_id": theID}).Decode(&res)
+	if err != nil{
         fmt.Println("Error finding certID")
-        return
+		//fmt.Printf("certID: %s, ", iD)
+		return
     }
 
     var update bool = false
@@ -272,7 +308,7 @@ func AppendNewStatus(client mongo.Client, cancel context.CancelFunc, certID stri
             update = true
         }
     }else {
-        if status != "Good"{
+        if status != "Good" && status != ""{
             newEntry := StatusUpdate{status, changeTime}
             res.Changes = append(res.Changes, newEntry)
             update = true
@@ -281,14 +317,17 @@ func AppendNewStatus(client mongo.Client, cancel context.CancelFunc, certID stri
 
     //Actual update to MongoDB. Could possibly be done in batches for better performance
     if update{
-        filter := bson.M{"_id":certID}
-        change, err := bson.Marshal(res)
+        //change, err := bson.Marshal(res)
+		fmt.Printf("We updated certID: %s with new data!! \n\n", certID)
+		update := bson.M{
+        "$set": res,
+		}
         if err != nil {
             fmt.Println("Error when using bson.Marshal.")
             fmt.Println(err)
         }
 
-        _, err = collection.UpdateOne(ctx, filter, change)
+        _, err = collection.UpdateOne(ctx, bson.M{"_id": theID}, update)
         if err != nil{
             fmt.Println("Error when trying to update document")
             fmt.Println(err)

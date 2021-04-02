@@ -1,11 +1,9 @@
-package main
+package revocado
 
 
 import (
 	"fmt"
 	"os"
-
-	"ct_logster/main"
 
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
@@ -33,10 +31,10 @@ func init() {
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 }
-
+//
 func main() {
 
-	IterateBlock(11)
+	//	IterateBlock(11)
 
 /*
 	//cronjobs start

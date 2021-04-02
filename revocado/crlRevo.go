@@ -1,4 +1,4 @@
-package main
+package revocado
 
 import (
 	"crypto/x509"
