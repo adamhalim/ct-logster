@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 	"sync"
 	"time"
 
@@ -202,25 +203,22 @@ func main() {
 			// the same routine on the same CTLog if the previous one
 			// hasn't finished running
 			CTLogs[ind].logLock.Lock()
+			defer setLogNotInUse(&CTLogs[ind])
+			defer CTLogs[ind].logLock.Unlock()
 			if CTLogs[ind].inUse {
 				fmt.Printf("Log already in use.\n")
-				CTLogs[ind].logLock.Unlock()
 				return
 			}
 
 			CTLogs[ind].inUse = true
-			CTLogs[ind].logLock.Unlock()
-
 			currSTH, err := updateTreeSize(CTLogs[ind])
 			if err != nil {
 				fmt.Printf("Error getting current tree size: %v", err.Error())
-				CTLogs[ind].inUse = false
 				return
 			}
 
 			if currSTH == CTLogs[ind].currentIndex {
 				fmt.Printf("Tree size unchanged, nothing to do.\n")
-				CTLogs[ind].inUse = false
 				return
 			}
 
@@ -241,7 +239,6 @@ func main() {
 			// I'll leave it here for debugging/logging
 			if uint64(len(cert)) != (currSTH-CTLogs[ind].currentIndex)+1 {
 				fmt.Printf("Wrong amount of certs downloaded, retrying later...\n")
-				CTLogs[ind].inUse = false
 				return
 			}
 
@@ -273,7 +270,6 @@ func main() {
 				})
 				if err != nil {
 					fmt.Printf("Error inserting chain cert into DB: %v", err.Error())
-					CTLogs[ind].inUse = false
 					return
 				}
 			}
@@ -283,12 +279,9 @@ func main() {
 				func(loopIndex int) {
 					// We decode the PEM to a *x509.Certificate,to access
 					// the certificate's fields easily.
-					x509ParsedCert, err := DecodePemsToX509(cert[loopIndex].PEM)
-					if err != nil {
-						fmt.Printf("Error parsing certs to x509: %v", err.Error())
-						CTLogs[ind].inUse = false
-						return
-					}
+					fmt.Printf("Error parsing certs to x509: %v", err.Error())
+					return
+				}
 
 					// Initialize structi with all fields
 					certificate := CertInfo{
@@ -323,14 +316,9 @@ func main() {
 					}
 
 					certificate.Chain = uniqueIDs
-					certificate.Certificate = cert[loopIndex].PEM
-					err = InsertCertIntoDB(*client, cancel, certificate)
-					if err != nil {
-						fmt.Printf("Error inserting cert into DB: %v", err.Error())
-						CTLogs[ind].inUse = false
-						return
-					}
-				}(i)
+					fmt.Printf("Error inserting cert into DB: %v", err.Error())
+					return
+				}
 			}
 			counter += currSTH - CTLogs[ind].currentIndex + 1
 			// We only increment our currentIndex if everything is
@@ -345,7 +333,6 @@ func main() {
 			// Another option is doing insertion in batches.
 			// We either insert all, or nothing.
 			CTLogs[ind].currentIndex = currSTH
-			CTLogs[ind].inUse = false
 		}(index)
 		index++
 		elapsedTime += 0.5
@@ -354,4 +341,8 @@ func main() {
 			fmt.Printf("Certs per second: %.2f\n", float32(counter)/float32(time.Since(start).Seconds()))
 		}
 	}
+}
+
+func setLogNotInUse(ctlog *CTLog) {
+	ctlog.inUse = false
 }
