@@ -7,7 +7,7 @@ import (
 
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
-	//"time"
+	"time"
 
 	"github.com/joho/godotenv"
 	/*"go.mongodb.org/mongo-driver/mongo"
@@ -31,12 +31,8 @@ func init() {
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 }
-//
+
 func main() {
-
-	//	IterateBlock(11)
-
-/*
 	//cronjobs start
 	log.Info("Create new cron")
 	c := cron.New()
@@ -48,7 +44,6 @@ func main() {
 	printCronEntries(c.Entries())
 
 	time.Sleep(5 * time.Minute)
-*/
 }
 
 //Should should be scheduled by main as cronjob?

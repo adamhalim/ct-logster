@@ -6,6 +6,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/robfig/cron"
+	logg "github.com/sirupsen/logrus"
+
 	"strings"
 	"time"
 	"github.com/CaliDog/certstream-go"
@@ -51,7 +54,43 @@ func init() {
 	dbPort = os.Getenv("PORT")
 }
 
-func main() {
+func main(){
+	fmt.Println("We actually ran")
+
+	programName := "no args"
+	if len(os.Args)>1{
+		programName = os.Args[1]
+	}
+
+	if programName == "log"{
+		logMain()
+
+	}else if programName == "rev"{
+		//cronjobs start
+		logg.Info("Create new cron")
+		c := cron.New()
+		//c.AddFunc("@every 0h05m", revocMain)
+
+		// Start cron with one scheduled job
+		logg.Info("Start cron")
+		c.Start()
+		printCronEntries(c.Entries())
+		revocMain()
+		//time.Sleep(50 * time.Minute)
+	}else{
+		fmt.Println("Start with either log or rev")
+	}
+}
+
+func revocMain(){
+	fmt.Println("We running revocMain!")
+	actualTime := time.Now()
+	hour := actualTime.Hour()
+	fmt.Println(hour)
+	IterateBlock(21)
+}
+
+func logMain() {
 	counter := 0
 	// The false flag specifies that we want heartbeat messages.
 	stream, errStream := certstream.CertStreamEventStream(false)
@@ -193,4 +232,8 @@ func main() {
 			log.Printf(err.Error())
 		}
 	}
+}
+
+func printCronEntries(cronEntries []cron.Entry) {
+	logg.Infof("Cron Info: %+v\n", cronEntries)
 }

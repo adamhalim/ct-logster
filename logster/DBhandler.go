@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	revoc "../revocado"
+	logg "github.com/sirupsen/logrus"
 
 	"context"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"errors"
 )
 
 
@@ -179,7 +181,7 @@ func IterateBlock(blockTime int){
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
-	findOptions.SetLimit(1000)
+	findOptions.SetLimit(5000)
 
 	col := client.Database(dbName).Collection(dbCollection)
 
@@ -204,7 +206,13 @@ func IterateBlock(blockTime int){
 			log.Fatal(err)
 		}
 		//CALL METHOD TO CHECK OCSP?
-		checkOCSP(client, cancel, elem, certIn.Chain[0])
+		go func(){
+
+			erro := checkOCSP(client, cancel, elem, certIn.Chain[0])
+			if erro != nil{
+				logg.Info(erro)
+			}
+		}()
 	}
 	if err := cur.Err(); err != nil {
 		log.Fatal(err)
@@ -214,27 +222,26 @@ func IterateBlock(blockTime int){
 	cur.Close(context.TODO())
 }
 
-func checkOCSP(client *mongo.Client, cancel context.CancelFunc, element bson.M, chainStringID string){
+func checkOCSP(client *mongo.Client, cancel context.CancelFunc, element bson.M, chainStringID string)(erro error){
 	// convert id string to ObjectId
 	objID, err := primitive.ObjectIDFromHex(chainStringID)
 	if err != nil{
-		log.Println("Invalid id")
+		return err
 	}
 
 	col2 := client.Database(dbName).Collection(dbChainCollection)
 	var result ChainCertPem
 	col2.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&result)
 
-
 	b, err := DecodePemsToX509(result.PEM)
 	if err != nil{
-		fmt.Println("B is fuk")
+		return err
 	}
 
 	cert := element["cert"]
 	c, err := DecodePemsToX509(cert.(string))
 	if err != nil{
-		fmt.Println("C is fuk")
+		return err
 	}
 
 	ocspURL := element["OCSP"]
@@ -243,12 +250,13 @@ func checkOCSP(client *mongo.Client, cancel context.CancelFunc, element bson.M, 
 		if ocspURL != nil{
 			a, err :=revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
 			if err != nil{
-				fmt.Println(err)
+				return err
 			}
 			rett := elemID.(primitive.ObjectID).Hex()
-			AppendNewStatus(client, cancel, rett, time.Now(), a)
-		}
+			return AppendNewStatus(client, cancel, rett, time.Now(), a)
+		}//Insert possibility for CT-Log
 	}
+	return errors.New("One or both PEMS were empty")
 }
 // Checks whether a certificate already is in the cert chain DB.
 // We run this for every cert in the chain to avoid saving duplicates.
@@ -279,7 +287,7 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 }
 //status should only be: Good, Unknown, Revoked or Unexcpected.
 //Unexcpeted will probably be handled earlier in code. But should still be handled here too
-func AppendNewStatus(client *mongo.Client, cancel context.CancelFunc, certID string, changeTime time.Time, status string){
+func AppendNewStatus(client *mongo.Client, cancel context.CancelFunc, certID string, changeTime time.Time, status string) (erro error){
     collection := client.Database(dbName).Collection(dbCollection)
     ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
     defer cancel()
@@ -288,13 +296,11 @@ func AppendNewStatus(client *mongo.Client, cancel context.CancelFunc, certID str
     var res CertInfo
 	theID, err2 := primitive.ObjectIDFromHex(certID)
 	if err2 != nil{
-		fmt.Println("error when converting certID to objectID")
+		return err2
 	}
 	err := collection.FindOne(ctx, bson.M{"_id": theID}).Decode(&res)
 	if err != nil{
-        fmt.Println("Error finding certID")
-		//fmt.Printf("certID: %s, ", iD)
-		return
+        return err
     }
 
     var update bool = false
@@ -323,14 +329,13 @@ func AppendNewStatus(client *mongo.Client, cancel context.CancelFunc, certID str
         "$set": res,
 		}
         if err != nil {
-            fmt.Println("Error when using bson.Marshal.")
-            fmt.Println(err)
-        }
+			return err
+		}
 
         _, err = collection.UpdateOne(ctx, bson.M{"_id": theID}, update)
         if err != nil{
-            fmt.Println("Error when trying to update document")
-            fmt.Println(err)
-        }
+			return err
+		}
     }
+	return nil
 }
