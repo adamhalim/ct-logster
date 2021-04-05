@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	revoc "../revocado"
-	logg "github.com/sirupsen/logrus"
+	//logg "github.com/sirupsen/logrus"
 
 	"context"
 	"fmt"
@@ -161,7 +161,7 @@ func IterateAllCerts() {
 
 func IterateBlock(blockTime int){
 	// Establish connection to MongoDB
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	uri := "mongodb://" + dbIp + ":" + dbPort
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
@@ -181,7 +181,7 @@ func IterateBlock(blockTime int){
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
-	findOptions.SetLimit(5000)
+	findOptions.SetLimit(100000)
 
 	col := client.Database(dbName).Collection(dbCollection)
 
@@ -192,6 +192,7 @@ func IterateBlock(blockTime int){
 	}
 	// Finding multiple documents returns a cursor
  	// Iterating through the cursor allows us to decode documents one at a time
+	count := 0
 	for cur.Next(context.TODO()) {
 		// create a value into which the single document can be decoded
 		var elem bson.M
@@ -207,23 +208,29 @@ func IterateBlock(blockTime int){
 		}
 		//CALL METHOD TO CHECK OCSP?
 		go func(){
-
-			erro := checkOCSP(client, cancel, elem, certIn.Chain[0])
+			erro := checkOCSP(/*client, cancel,*/ elem, certIn.Chain[0])
 			if erro != nil{
-				logg.Info(erro)
+				log.Println(erro)
 			}
 		}()
+		count++
 	}
+	fmt.Println("Count:")
+	fmt.Println(count)
 	if err := cur.Err(); err != nil {
 		log.Fatal(err)
 	}
-
 	// Close the cursor once finished
-	cur.Close(context.TODO())
+	//cur.Close(context.TODO())
 }
 
-func checkOCSP(client *mongo.Client, cancel context.CancelFunc, element bson.M, chainStringID string)(erro error){
+func checkOCSP(/*client *mongo.Client, cancel context.CancelFunc,*/ element bson.M, chainStringID string)(erro error){
 	// convert id string to ObjectId
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	uri := "mongodb://" + dbIp + ":" + dbPort
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+
 	objID, err := primitive.ObjectIDFromHex(chainStringID)
 	if err != nil{
 		return err
@@ -246,17 +253,26 @@ func checkOCSP(client *mongo.Client, cancel context.CancelFunc, element bson.M, 
 
 	ocspURL := element["OCSP"]
 	elemID := element["_id"]
-	if len(b) != 0 && len(c) != 0{
+
+	if len(b) == 0{
+		//fmt.Printf("B contains = %v\n and C contains = %v\n", b, c)
+		return errors.New("Chain PEM was not found correctly")
+	}else if len(c) == 0{
+		return errors.New("Cert PEM was not giving correct info")
+	}else {
 		if ocspURL != nil{
 			a, err :=revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
 			if err != nil{
 				return err
 			}
 			rett := elemID.(primitive.ObjectID).Hex()
+			fmt.Println("Trying to append new status")
 			return AppendNewStatus(client, cancel, rett, time.Now(), a)
 		}//Insert possibility for CT-Log
+		return errors.New("OCSP-URL not found!")
 	}
-	return errors.New("One or both PEMS were empty")
+	//fmt.Printf("b =%v \n c =%v \n ocsp-url = %s", b, c, cert.(string))
+	//return errors.New("Unexcpected error in checkOCSP")
 }
 // Checks whether a certificate already is in the cert chain DB.
 // We run this for every cert in the chain to avoid saving duplicates.
@@ -290,7 +306,7 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 func AppendNewStatus(client *mongo.Client, cancel context.CancelFunc, certID string, changeTime time.Time, status string) (erro error){
     collection := client.Database(dbName).Collection(dbCollection)
     ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
-    defer cancel()
+    //defer cancel()
 
     // Read Once
     var res CertInfo

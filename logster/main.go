@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/robfig/cron"
-	logg "github.com/sirupsen/logrus"
 
 	"strings"
 	"time"
@@ -60,6 +59,7 @@ func main(){
 	programName := "no args"
 	if len(os.Args)>1{
 		programName = os.Args[1]
+		fmt.Println(programName)
 	}
 
 	if programName == "log"{
@@ -67,12 +67,12 @@ func main(){
 
 	}else if programName == "rev"{
 		//cronjobs start
-		logg.Info("Create new cron")
+		log.Println("Create new cron")
 		c := cron.New()
 		//c.AddFunc("@every 0h05m", revocMain)
 
 		// Start cron with one scheduled job
-		logg.Info("Start cron")
+		log.Println("Start cron")
 		c.Start()
 		printCronEntries(c.Entries())
 		revocMain()
@@ -235,5 +235,5 @@ func logMain() {
 }
 
 func printCronEntries(cronEntries []cron.Entry) {
-	logg.Infof("Cron Info: %+v\n", cronEntries)
+	log.Printf("Cron Info: %+v\n", cronEntries)
 }
