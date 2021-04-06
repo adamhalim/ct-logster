@@ -9,8 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	revoc "../revocado"
-	//logg "github.com/sirupsen/logrus"
 
+	"golang.org/x/sync/semaphore"
 	"context"
 	"fmt"
 	"log"
@@ -181,7 +181,7 @@ func IterateBlock(blockTime int){
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
-	findOptions.SetLimit(100000)
+	findOptions.SetLimit(10000)
 
 	col := client.Database(dbName).Collection(dbCollection)
 
@@ -190,9 +190,14 @@ func IterateBlock(blockTime int){
 	if err != nil {
 		fmt.Println("Error when collecting")
 	}
+	count :=0
+
+	//Number of go-rutines that can run at the same time.
+	//Aquisition is done withing the loop
+	var sem = semaphore.NewWeighted(100)
+
 	// Finding multiple documents returns a cursor
  	// Iterating through the cursor allows us to decode documents one at a time
-	count := 0
 	for cur.Next(context.TODO()) {
 		// create a value into which the single document can be decoded
 		var elem bson.M
@@ -206,9 +211,19 @@ func IterateBlock(blockTime int){
 		if err != nil {
 			log.Fatal(err)
 		}
-		//CALL METHOD TO CHECK OCSP?
-		go func(){
-			erro := checkOCSP(/*client, cancel,*/ elem, certIn.Chain[0])
+
+		//Artificial bottleneck to callOCSP
+		//This is puts a cap on the number of connections to the DB
+		ctxo := context.TODO()
+		if err := sem.Acquire(ctxo, 1); err != nil {
+			log.Printf("Failed to acquire semaphore: %v", err)
+			break
+		}
+
+		go func() {
+			defer sem.Release(1)
+			//CALL METHOD TO CHECK OCSP
+			erro := checkOCSP(elem, certIn.Chain[0])
 			if erro != nil{
 				log.Println(erro)
 			}
@@ -221,16 +236,24 @@ func IterateBlock(blockTime int){
 		log.Fatal(err)
 	}
 	// Close the cursor once finished
-	//cur.Close(context.TODO())
+	cur.Close(context.TODO())
 }
 
-func checkOCSP(/*client *mongo.Client, cancel context.CancelFunc,*/ element bson.M, chainStringID string)(erro error){
-	// convert id string to ObjectId
+func checkOCSP(element bson.M, chainStringID string)(erro error){
+	// Establish connection to MongoDB
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	uri := "mongodb://" + dbIp + ":" + dbPort
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 
+	//disconnects the db
+	defer func() {
+		if err = client.Disconnect(ctx); err != nil {
+			panic(err)
+		}
+	}()
+
+	// convert id string to ObjectId
 	objID, err := primitive.ObjectIDFromHex(chainStringID)
 	if err != nil{
 		return err
@@ -254,26 +277,32 @@ func checkOCSP(/*client *mongo.Client, cancel context.CancelFunc,*/ element bson
 	ocspURL := element["OCSP"]
 	elemID := element["_id"]
 
+
 	if len(b) == 0{
-		//fmt.Printf("B contains = %v\n and C contains = %v\n", b, c)
 		return errors.New("Chain PEM was not found correctly")
 	}else if len(c) == 0{
 		return errors.New("Cert PEM was not giving correct info")
 	}else {
+		crl := element["CRL"]
+		serial := element["serialNumber"]
+		rett := elemID.(primitive.ObjectID).Hex()
+
 		if ocspURL != nil{
 			a, err :=revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
 			if err != nil{
 				return err
 			}
-			rett := elemID.(primitive.ObjectID).Hex()
-			fmt.Println("Trying to append new status")
-			return AppendNewStatus(client, cancel, rett, time.Now(), a)
-		}//Insert possibility for CT-Log
+			return AppendNewStatus(client, rett, time.Now(), a)
+		}else if crl != nil && crl != ""{
+			if revoc.IsCertInCRL(crl.(string), serial.(string)){
+				fmt.Println("CRL WAS FOUND \n")
+				return AppendNewStatus(client, rett, time.Now(), "Revoked")
+			}
+		}
 		return errors.New("OCSP-URL not found!")
 	}
-	//fmt.Printf("b =%v \n c =%v \n ocsp-url = %s", b, c, cert.(string))
-	//return errors.New("Unexcpected error in checkOCSP")
 }
+
 // Checks whether a certificate already is in the cert chain DB.
 // We run this for every cert in the chain to avoid saving duplicates.
 // (A lot of certificates share chain certs)
@@ -301,14 +330,15 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 	}
 	return "", nil
 }
+
 //status should only be: Good, Unknown, Revoked or Unexcpected.
 //Unexcpeted will probably be handled earlier in code. But should still be handled here too
-func AppendNewStatus(client *mongo.Client, cancel context.CancelFunc, certID string, changeTime time.Time, status string) (erro error){
+func AppendNewStatus(client *mongo.Client, certID string, changeTime time.Time, status string) (erro error){
     collection := client.Database(dbName).Collection(dbCollection)
-    ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
-    //defer cancel()
+    ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+    defer cancel()
 
-    // Read Once
+   // Read Once
     var res CertInfo
 	theID, err2 := primitive.ObjectIDFromHex(certID)
 	if err2 != nil{
