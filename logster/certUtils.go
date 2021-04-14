@@ -259,7 +259,7 @@ func CertRateInterval(ctlog CTLog, hourOffset float64, duration float64) (float6
 	}
 
 	// How many certs / second between the two indexes
-	rate := ( float64(secondIndex) - float64(firstIndex) ) / (float64(secondHour) * 3600) 
+	rate := ( float64(secondIndex) - float64(firstIndex) ) / (float64(duration) * 3600) 
 	if math.IsNaN(rate) {
 		return 0, nil
 	}
