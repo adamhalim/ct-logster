@@ -245,6 +245,24 @@ func getPEMdata(data []byte) string {
 	return s
 }
 
+// Returns the cert rate in certificates per second between
+// specified interval
+func CertRateInterval(ctlog CTLog, hourOffset float64, duration float64) (float64, error) {
+	firstIndex, firstHour, err := GetIndexThisManyHoursBack(ctlog, hourOffset)
+	if err != nil {
+		return 0, err
+	}
+
+	secondIndex, secondHour, err := GetIndexThisManyHoursBack(ctlog, duration)
+	if err != nil {
+		return 0, err
+	}
+
+	// How many certs / second between the two indexes
+	rate := float64(secondIndex - firstIndex) / (float64((firstHour - secondHour) * 3600))
+	return rate, nil
+}
+
 // Finds index of a CTLog that is a specified amount of hours 
 // back in time relativeto the current tree.
 func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, error) {
