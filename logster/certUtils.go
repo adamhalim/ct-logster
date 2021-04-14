@@ -248,7 +248,7 @@ func getPEMdata(data []byte) string {
 // Returns the cert rate in certificates per second between
 // specified interval
 func CertRateInterval(ctlog CTLog, hourOffset float64, duration float64) (float64, error) {
-	firstIndex, firstHour, err := GetIndexThisManyHoursBack(ctlog, hourOffset)
+	firstIndex, _, err := GetIndexThisManyHoursBack(ctlog, hourOffset)
 	if err != nil {
 		return 0, err
 	}
@@ -259,6 +259,7 @@ func CertRateInterval(ctlog CTLog, hourOffset float64, duration float64) (float6
 	}
 
 	// How many certs / second between the two indexes
+	rate := ( float64(secondIndex) - float64(firstIndex) ) / (float64(secondHour) * 3600) 
 	if math.IsNaN(rate) {
 		return 0, nil
 	}
