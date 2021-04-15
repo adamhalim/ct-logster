@@ -34,6 +34,7 @@ func GetOCSP(url string, issuer *x509.Certificate, cert *x509.Certificate) (stat
 // certificate, and *does not* mean the certificate is valid.
 func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResponse *ocsp.Response, err error) {
     var resp *http.Response
+
     if len(req) > 256 {
         buf := bytes.NewBuffer(req)
         resp, err = http.Post(url, "application/ocsp-request", buf)

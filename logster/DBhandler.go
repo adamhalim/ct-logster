@@ -41,7 +41,6 @@ func init() {
 
 // Makes one insertion into MongoDB
 func InsertCertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo) error{
-
 	collection := client.Database(dbName).Collection(dbCollection)
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -56,7 +55,6 @@ func InsertCertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertI
 
 // Makes one insertion into MongoDB
 func InsertChainCertIntoDB(client mongo.Client, cancel context.CancelFunc, chain ChainCertPem) (objectID string, err error) {
-
 	// If, for any reason, the Chain certificate is empty,
 	// we return.
 	if chain.PEM == "" {
@@ -161,7 +159,7 @@ func IterateAllCerts() {
 
 func IterateBlock(blockTime int){
 	// Establish connection to MongoDB
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
 	defer cancel()
 	uri := "mongodb://" + dbIp + ":" + dbPort
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
@@ -181,7 +179,8 @@ func IterateBlock(blockTime int){
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
-	findOptions.SetLimit(10000)
+	findOptions.SetNoCursorTimeout(true)
+	findOptions.SetBatchSize(5000)
 
 	col := client.Database(dbName).Collection(dbCollection)
 
@@ -191,10 +190,9 @@ func IterateBlock(blockTime int){
 		fmt.Println("Error when collecting")
 	}
 	count :=0
-
 	//Number of go-rutines that can run at the same time.
 	//Aquisition is done withing the loop
-	var sem = semaphore.NewWeighted(100)
+	var sem = semaphore.NewWeighted(70)
 
 	// Finding multiple documents returns a cursor
  	// Iterating through the cursor allows us to decode documents one at a time
@@ -230,13 +228,17 @@ func IterateBlock(blockTime int){
 		}()
 		count++
 	}
-	fmt.Println("Count:")
-	fmt.Println(count)
+	fmt.Printf("Count: %d, Count Success: %d, Hour: %d ", count, countS, blockTime)
 	if err := cur.Err(); err != nil {
 		log.Fatal(err)
 	}
 	// Close the cursor once finished
 	cur.Close(context.TODO())
+}
+
+var countS int = 0
+func updateCount(){
+	countS++
 }
 
 func checkOCSP(element bson.M, chainStringID string)(erro error){
@@ -292,9 +294,10 @@ func checkOCSP(element bson.M, chainStringID string)(erro error){
 			if err != nil{
 				return err
 			}
+			updateCount()
 			return AppendNewStatus(client, rett, time.Now(), a)
 		}else if crl != nil && crl != ""{
-			if revoc.IsCertInCRL(crl.(string), serial.(string)){
+			if 1 == revoc.IsCertInCRL(crl.(string), serial.(string)){
 				fmt.Println("CRL WAS FOUND \n")
 				return AppendNewStatus(client, rett, time.Now(), "Revoked")
 			}
@@ -335,7 +338,7 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 //Unexcpeted will probably be handled earlier in code. But should still be handled here too
 func AppendNewStatus(client *mongo.Client, certID string, changeTime time.Time, status string) (erro error){
     collection := client.Database(dbName).Collection(dbCollection)
-    ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
    // Read Once

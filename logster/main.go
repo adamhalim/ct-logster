@@ -69,14 +69,14 @@ func main(){
 		//cronjobs start
 		log.Println("Create new cron")
 		c := cron.New()
-		//c.AddFunc("@every 0h05m", revocMain)
+		c.AddFunc("@every 1h00m", revocMain)
 
 		// Start cron with one scheduled job
 		log.Println("Start cron")
 		c.Start()
 		printCronEntries(c.Entries())
 		revocMain()
-		//time.Sleep(50 * time.Minute)
+		time.Sleep(185 * time.Minute)
 	}else{
 		fmt.Println("Start with either log or rev")
 	}
@@ -86,6 +86,8 @@ func revocMain(){
 	fmt.Println("We running revocMain!")
 	actualTime := time.Now()
 	hour := actualTime.Hour()
+	hour += 8
+	fmt.Println(hour)
 	IterateBlock(hour)
 }
 

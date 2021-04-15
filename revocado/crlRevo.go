@@ -31,32 +31,35 @@ func downloadCRL(url string) (response *http.Response, err error) {
 }
 
 // Checks to see if a certificate is in the .crl
-func IsCertInCRL(crlURL string, serialnumber string) bool {
+func IsCertInCRL(crlURL string, serialnumber string) byte {
 	crl, err := downloadCRL(crlURL)
 	if err != nil {
 		fmt.Printf("%s", err)
+		return 3
 	}
 
 	// Convert response body to []byte array
 	crlArray, err := ioutil.ReadAll(crl.Body)
 	if err != nil {
 		fmt.Printf("%s", err)
+		return 3
 	}
 
 	// We parse the CRL file.
 	certList, err := x509.ParseCRL(crlArray)
 	if err != nil {
 		fmt.Printf("%s", err)
+		return 3
 	}
 
-	validCert := false
+	var validCert byte = 2
 
 	// Iterate through all revoked certificates
 	for i := 0; i < len(certList.TBSCertList.RevokedCertificates); i++ {
 		// Convert to hex-string
 		h := fmt.Sprintf("%x", certList.TBSCertList.RevokedCertificates[i].SerialNumber)
 		if strings.EqualFold(strings.ToUpper(serialnumber), strings.ToUpper(h)) {
-			validCert = true
+			validCert = 1
 			break
 		}
 	}
