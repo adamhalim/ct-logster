@@ -248,18 +248,18 @@ func getPEMdata(data []byte) string {
 // Returns the cert rate in certificates per second between
 // specified interval
 func CertRateInterval(ctlog CTLog, hourOffset float64, duration float64) (float64, error) {
-	firstIndex, _, err := GetIndexThisManyHoursBack(ctlog, hourOffset)
+	firstIndex, firstHour, err := GetIndexThisManyHoursBack(ctlog, hourOffset)
 	if err != nil {
 		return 0, err
 	}
 
-	secondIndex, secondHour, err := GetIndexThisManyHoursBack(ctlog, duration)
+	secondIndex, secondHour, err := GetIndexThisManyHoursBack(ctlog, hourOffset - duration)
 	if err != nil {
 		return 0, err
 	}
 
 	// How many certs / second between the two indexes
-	rate := ( float64(secondIndex) - float64(firstIndex) ) / (float64(duration) * 3600) 
+	rate := ( float64(secondIndex) - float64(firstIndex) ) / ((float64(firstHour) - float64(secondHour)) * 3600) 
 	if math.IsNaN(rate) {
 		return 0, nil
 	}
@@ -275,7 +275,7 @@ func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, err
 	}
 
 	// We use an initial offset of 0.1 % of the treeSize
-	indexOffset := math.Ceil(float64(treeSize.TreeSize) * 0.001)
+	indexOffset := math.Ceil(float64(treeSize.TreeSize) * 0.001) + 1
 	currIndex := float64(treeSize.TreeSize) - indexOffset
 
 	// We get the latest entry in the CTLog and record the timestamp
@@ -302,6 +302,7 @@ func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, err
 	// As long as we're not within 10 % of hour time difference, we keep searching
 	// for an entry that was logged the specified amount of hours back
 	for {
+		tries--
 		currIndex = float64(treeSize.TreeSize) - indexOffset
 		entry, err := ctlog.logClient.GetRawEntries(context.Background(), int64(currIndex), int64(currIndex))
 		if err != nil {
@@ -321,22 +322,15 @@ func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, err
 		// Time is in ms, divide by 3600 * 1000 to get hours
 		hourDiff = float64(timeDiff) / (3600000)
 
-		tries--
 		if tries == 0 {
 			return 0, 0, errors.New(fmt.Sprintf("Too many attempts getting index %.2f hours back, Aborting.", hours))
 		}
 
-		// TODO: Better estimation. We could get an initial sample and 
-		// then do a guesstimate by taking hours / hourDiff of the first sample,
-		// which should take us close to where we want to be
-		if hourDiff > hours {
-			// If we overshoot, we want to go back again in the index,
-			// we decrease our offset.
-			indexOffset = math.Ceil(indexOffset * 0.55)
-		} else {
-			// If we undershoot our index, we increase our offset.
-			indexOffset = math.Ceil(indexOffset * 1.2)
-		}
+		// This logic only works if the log has ~linear growth rate.
+		// It will fail for logs with large batches of certs.
+		// Also won't work for small logs (which don't matter much anyways)
+		// TODO: Use a SMA with binary search or something similar?
+		indexOffset = math.Ceil((hours / hourDiff) * indexOffset) + 1
 
 		// Bad check here. While we are out of bounds, there might still be
 		// an entry at the start of the log within our target. Will
@@ -344,7 +338,8 @@ func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, err
 		// TODO: Improve this, we miss a lot of certificates when we
 		// have long hour offsets
 		if indexOffset > float64(treeSize.TreeSize) {
-			return 0, 0, errors.New(fmt.Sprintf("Out of bounds: no certificate %.2f hours back.", hours))
+			indexOffset *= 0.5
+			continue
 		}
 		// Break when we are within 10 % of our target
 		if  float64(hourDiff) > (hours * 0.9) && float64(hourDiff) < (hours * 1.1)  {
