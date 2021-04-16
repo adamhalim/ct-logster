@@ -17,9 +17,12 @@ import (
 )
 
 
-func GetOCSP(url string, issuer *x509.Certificate) (status string, err error){
-
-	ocspResp, err := randomSerialTest(url, issuer)
+func GetOCSP(url string, issuer *x509.Certificate, cert *x509.Certificate) (status string, err error){
+	req, err := ocsp.CreateRequest(cert, issuer, nil)
+	ocspResp, err := sendOCSPRequest(url, req,issuer)
+	if err != nil{
+		return "", err
+	}
 
 	if ocspResp.Status == ocsp.Good {
 		return "Good", nil
@@ -37,6 +40,7 @@ func GetOCSP(url string, issuer *x509.Certificate) (status string, err error){
 // certificate, and *does not* mean the certificate is valid.
 func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResponse *ocsp.Response, err error) {
     var resp *http.Response
+
     if len(req) > 256 {
         buf := bytes.NewBuffer(req)
         resp, err = http.Post(url, "application/ocsp-request", buf)
@@ -55,7 +59,7 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
 
     body, err := ioutil.ReadAll(resp.Body)
     if err != nil {
-        return
+        return nil, errors.New("Could not read body")
     }
     resp.Body.Close()
 

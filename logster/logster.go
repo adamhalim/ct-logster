@@ -7,7 +7,9 @@ import (
 	"os"
 	"time"
 	"sync"
-	
+
+	"github.com/robfig/cron"
+
 	"github.com/google/certificate-transparency-go/client"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -38,6 +40,11 @@ type CertInfo struct {
 	Chain        []string       `bson:"certChain,omitempty"`
 	Time         int            `bson:"Time"`
 	Changes      []StatusUpdate `bson:"Change"`
+}
+
+type StatusUpdate struct{
+	Status 	string
+	Time 	time.Time
 }
 
 type ChainCertPem struct {
@@ -131,6 +138,42 @@ func initLogClients() {
 	}
 }
 
+func main(){
+	programName := "no args"
+	if len(os.Args)>1{
+		programName = os.Args[1]
+		fmt.Println(programName)
+	}
+
+	if programName == "log"{
+		logMain()
+
+	}else if programName == "rev"{
+		//cronjobs start
+		log.Println("Create new cron")
+		c := cron.New()
+		c.AddFunc("@every 1h00m", revocMain)
+
+		// Start cron with one scheduled job
+		log.Println("Start cron")
+		c.Start()
+		log.Printf("Cron Info: %+v\n", c.Entries)
+		revocMain()
+		time.Sleep(185 * time.Minute)
+	}else{
+		fmt.Println("Start with either log or rev")
+	}
+}
+
+func revocMain(){
+	fmt.Println("We running revocMain!")
+	actualTime := time.Now()
+	hour := actualTime.Hour()
+	hour += 23
+	fmt.Println(hour)
+	IterateBlock(hour)
+}
+
 // 1102495 - 1105460
 
 // Returns the current Tree Size for a give CT log
@@ -150,7 +193,7 @@ func updateTreeSize(ctlog CTLog) (uint64, error) {
 	return currSTH, nil
 }
 
-func main() {
+func logMain() {
 
 	// Used for dev-prints
 	DEBUG := true

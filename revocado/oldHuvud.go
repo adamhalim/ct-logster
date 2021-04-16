@@ -1,5 +1,4 @@
-package main
-
+package revocado
 
 import (
 	"fmt"
