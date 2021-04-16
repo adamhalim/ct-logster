@@ -1,4 +1,4 @@
-package main
+package revocado
 import (
 	"crypto/x509"
 	"fmt"
@@ -30,22 +30,26 @@ func downloadCRL(url string) (response *http.Response, err error) {
 }
 
 // Checks to see if a certificate is in the .crl
-func isCertInCRL(crlURL string, serialnumber string) bool {
+// TODO: Should return error and bool!!!
+func IsCertInCRL(crlURL string, serialnumber string) bool {
 	crl, err := downloadCRL(crlURL)
 	if err != nil {
 		fmt.Printf("%s", err)
+		return false
 	}
 
 	// Convert response body to []byte array
 	crlArray, err := ioutil.ReadAll(crl.Body)
 	if err != nil {
 		fmt.Printf("%s", err)
+		return false
 	}
 
 	// We parse the CRL file.
 	certList, err := x509.ParseCRL(crlArray)
 	if err != nil {
 		fmt.Printf("%s", err)
+		return false
 	}
 
 	validCert := false
