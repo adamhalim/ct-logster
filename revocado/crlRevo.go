@@ -1,4 +1,6 @@
 package revocado
+
+import(
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
