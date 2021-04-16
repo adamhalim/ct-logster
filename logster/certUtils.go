@@ -246,14 +246,17 @@ func getPEMdata(data []byte) string {
 }
 
 // Returns the cert rate in certificates per second between
-// specified interval
-func CertRateInterval(ctlog CTLog, hourOffset float64, duration float64) (float64, error) {
-	firstIndex, firstHour, err := GetIndexThisManyHoursBack(ctlog, hourOffset)
+// specified interval.
+// The tolerance should be between 0-1 and specifies how close we can
+// be to our hoursBack before we are satisfied. A tolerance of 0.1 means we need 
+// to be ± 10 % within our target.
+func (ctlog CTLog) GetCertRateHistory(hoursBack float64, duration float64, tolerance float64) (float64, error) {
+	firstIndex, firstHour, err := ctlog.getIndexHistory(hoursBack, tolerance)
 	if err != nil {
 		return 0, err
 	}
 
-	secondIndex, secondHour, err := GetIndexThisManyHoursBack(ctlog, hourOffset - duration)
+	secondIndex, secondHour, err := ctlog.getIndexHistory(hoursBack - duration, tolerance)
 	if err != nil {
 		return 0, err
 	}
@@ -266,9 +269,12 @@ func CertRateInterval(ctlog CTLog, hourOffset float64, duration float64) (float6
 	return rate, nil
 }
 
-// Finds index of a CTLog that is a specified amount of hours 
-// back in time relativeto the current tree.
-func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, error) {
+// Finds index of a CTLog that is a specified amount of hours
+// back in time relative to the current tree.
+func (ctlog CTLog) getIndexHistory(hoursBack float64, tolerance float64) (uint64, float64, error) {
+	if tolerance <= 0 || tolerance > 1 {
+		return 0, 0, errors.New("Tolerance not within the limit 0-1.")
+	}
 	treeSize, err := ctlog.logClient.GetSTH(context.Background())
 	if err != nil {
 		return 0, 0, err
@@ -291,7 +297,7 @@ func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, err
 	timeNow := time.Unix(int64(logentry.Leaf.TimestampedEntry.Timestamp), 0)
 
 	// Bounds check; are our hours within the scope of the CTLog?
-	_, err = hourOffsetInBounds(ctlog, timeNow, hours)
+	_, err = hourOffsetInBounds(ctlog, timeNow, hoursBack)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -323,14 +329,14 @@ func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, err
 		hourDiff = float64(timeDiff) / (3600000)
 
 		if tries == 0 {
-			return 0, 0, errors.New(fmt.Sprintf("Too many attempts getting index %.2f hours back, Aborting.", hours))
+			return 0, 0, errors.New(fmt.Sprintf("Too many attempts getting index %.2f hours back, Aborting.", hoursBack))
 		}
 
 		// This logic only works if the log has ~linear growth rate.
 		// It will fail for logs with large batches of certs.
 		// Also won't work for small logs (which don't matter much anyways)
 		// TODO: Use a SMA with binary search or something similar?
-		indexOffset = math.Ceil((hours / hourDiff) * indexOffset) + 1
+		indexOffset = math.Ceil((hoursBack / hourDiff) * indexOffset) + 1
 
 		// Bad check here. While we are out of bounds, there might still be
 		// an entry at the start of the log within our target. Will
@@ -341,8 +347,8 @@ func GetIndexThisManyHoursBack(ctlog CTLog, hours float64) (uint64, float64, err
 			indexOffset *= 0.5
 			continue
 		}
-		// Break when we are within 10 % of our target
-		if  float64(hourDiff) > (hours * 0.9) && float64(hourDiff) < (hours * 1.1)  {
+		// Break when we are within our tolerance
+		if  float64(hourDiff) > (hoursBack * (1 - tolerance)) && float64(hourDiff) < (hoursBack * (1 + tolerance))  {
 			break
 		}
 	}
