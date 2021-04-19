@@ -389,3 +389,24 @@ func AppendNewStatus(client *mongo.Client, certID string, changeTime time.Time, 
     }
 	return nil
 }
+
+// Returns the corresponding PEM string for a chain cert ID
+// from the DB
+func getPEMfromID(certID string, client *mongo.Client) (string, error) {
+    objectID, err := primitive.ObjectIDFromHex(certID)
+    if err != nil {
+        return "", err
+    }
+    var result bson.M
+    col := client.Database(dbName).Collection(dbChainCollection)
+    err = col.FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&result)
+    if err != nil {
+        return "", err
+    }
+
+    if result["pem"] != nil {
+        return fmt.Sprintf("%v", result["pem"]), nil
+    }
+    // If no cert found, return error
+    return "", errors.New(fmt.Sprintf("No cert found with id %s.\n", certID))
+}
