@@ -165,6 +165,9 @@ func IterateBlock(blockTime int){
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 
 	//disconnects the db when exiting main.
+	// TODO: Make a WaitGroup so that all 
+	// requests finish before disconnecting the 
+	// DB.
 	defer func() {
 		if err = client.Disconnect(ctx); err != nil {
 			panic(err)
@@ -192,7 +195,9 @@ func IterateBlock(blockTime int){
 	count :=0
 	//Number of go-rutines that can run at the same time.
 	//Aquisition is done withing the loop
-	var sem = semaphore.NewWeighted(70)
+	var sem = semaphore.NewWeighted(500)
+
+	start := time.Now()
 
 	// Finding multiple documents returns a cursor
  	// Iterating through the cursor allows us to decode documents one at a time
@@ -221,16 +226,20 @@ func IterateBlock(blockTime int){
 		go func() {
 			defer sem.Release(1)
 			//CALL METHOD TO CHECK OCSP
-			erro := checkOCSP(elem, certIn.Chain[0])
+			erro := checkOCSP(elem, certIn.Chain[0], client, *col)
 			if erro != nil{
 				log.Println(erro)
 			}
 		}()
 		count++
+		if count % 100 == 0 {
+			fmt.Printf("Reqs / s: %.2f\n", float64(count) / float64(time.Since(start).Seconds()))
+		}
 	}
 	fmt.Printf("Count: %d, Count Success: %d, Hour: %d ", count, countS, blockTime)
 	if err := cur.Err(); err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
+		fmt.Printf("%v\n", err.Error())
 	}
 	// Close the cursor once finished
 	cur.Close(context.TODO())
@@ -241,19 +250,7 @@ func updateCount(){
 	countS++
 }
 
-func checkOCSP(element bson.M, chainStringID string)(erro error){
-	// Establish connection to MongoDB
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	uri := "mongodb://" + dbIp + ":" + dbPort
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
-
-	//disconnects the db
-	defer func() {
-		if err = client.Disconnect(ctx); err != nil {
-			panic(err)
-		}
-	}()
+func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col mongo.Collection)(erro error){
 
 	// convert id string to ObjectId
 	objID, err := primitive.ObjectIDFromHex(chainStringID)
@@ -296,11 +293,11 @@ func checkOCSP(element bson.M, chainStringID string)(erro error){
 			}
 			updateCount()
 
-			return AppendNewStatus(client, rett, time.Now(), a)
+			return AppendNewStatus(col, rett, time.Now(), a)			
 		}else if crl != nil && crl != ""{
 			if revoc.IsCertInCRL(crl.(string), serial.(string)){
 				fmt.Println("CRL WAS FOUND \n")
-				return AppendNewStatus(client, rett, time.Now(), "Revoked")
+				return AppendNewStatus(col, rett, time.Now(), "Revoked")
 			}
 		}
 		return errors.New("OCSP-URL not found!")
@@ -337,10 +334,7 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 
 //status should only be: Good, Unknown, Revoked or Unexcpected.
 //Unexcpeted will probably be handled earlier in code. But should still be handled here too
-func AppendNewStatus(client *mongo.Client, certID string, changeTime time.Time, status string) (erro error){
-    collection := client.Database(dbName).Collection(dbCollection)
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    defer cancel()
+func AppendNewStatus(collection mongo.Collection, certID string, changeTime time.Time, status string) (erro error){
 
    // Read Once
     var res CertInfo
