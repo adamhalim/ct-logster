@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
-	revoc "../revocado"
+	revoc "revocado"
 
 	"golang.org/x/sync/semaphore"
 	"context"
