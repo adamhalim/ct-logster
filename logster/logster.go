@@ -38,7 +38,6 @@ type CertInfo struct {
 	CTlog        string         `bson:"ctLog"`
 	Certificate  string         `bson:"cert,omitempty"`
 	Chain        []string       `bson:"certChain,omitempty"`
-	Time         int            `bson:"Time"`
 	Changes      []StatusUpdate `bson:"Change"`
 }
 
@@ -113,7 +112,6 @@ func init() {
 	dbIp = os.Getenv("IP_ADDRESS")
 	dbPort = os.Getenv("PORT")
 	dbName = os.Getenv("DB")
-	dbCollection = os.Getenv("MAIN_COLLECTION")
 	dbChainCollection = os.Getenv("CERT_COLLECTION")
 }
 
@@ -335,7 +333,6 @@ func logMain() {
 					Domain:       x509ParsedCert[0].DNSNames,
 					Certificate:  cert[i].PEM,
 					Chain:        chain[i],
-					Time:         time.Now().Hour(),
 					CTlog:        CTLogs[ind].logClient.BaseURI(),
 				}
 

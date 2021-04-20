@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	revoc "revocado"
 
@@ -15,13 +14,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"time"
 	"errors"
 )
 
 
-var dbUsername, dbPassword, dbIp, dbPort, dbName, dbCollection, dbChainCollection string
+var dbUsername, dbPassword, dbIp, dbPort, dbName, dbChainCollection string
 
 // Loads .env file
 func init() {
@@ -35,13 +33,12 @@ func init() {
 	dbIp = os.Getenv("IP_ADDRESS")
 	dbPort = os.Getenv("PORT")
 	dbName = os.Getenv("DB")
-	dbCollection = os.Getenv("MAIN_COLLECTION")
 	dbChainCollection = os.Getenv("CERT_COLLECTION")
 }
 
 // Makes one insertion into MongoDB
 func InsertCertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo) error{
-	collection := client.Database(dbName).Collection(dbCollection)
+	collection := client.Database(dbName).Collection(fmt.Sprintf("%d", time.Now().Hour()))
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -87,75 +84,6 @@ func InsertChainCertIntoDB(client mongo.Client, cancel context.CancelFunc, chain
 	return idString, nil
 }
 
-// This will iterate though all certs in
-// database.collection and currently runs
-// GetCertChain() on all documents.
-func IterateAllCerts() {
-	// Establish connection to MongoDB
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	uri := "mongodb://" + dbIp + ":" + dbPort
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
-
-	//disconnects the db when exiting main.
-	defer func() {
-		if err = client.Disconnect(ctx); err != nil {
-			panic(err)
-		}
-	}()
-
-	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	err = client.Ping(ctx, readpref.Primary())
-
-	fmt.Println("Connected to MongoDB Server: " + dbIp + ".")
-
-	col := client.Database(dbName).Collection(dbCollection)
-	cursor, err := col.Find(context.TODO(), bson.D{})
-	if err != nil {
-		fmt.Println("Finding all documents ERROR:", err)
-		defer cursor.Close(ctx)
-	} else {
-		// Creates a WaitGroup that will wait for all
-		// routines to finish before closing program
-		var wg sync.WaitGroup
-		for cursor.Next(ctx) {
-			var result bson.M
-			err := cursor.Decode(&result)
-			// If there is a cursor.Decode error
-			if err != nil {
-				fmt.Println("cursor.Next() error:", err)
-			} else {
-				index := result["certIndex"]
-				url := result["ctLog"]
-
-				indexStr := fmt.Sprintf("%v", index)
-				urlStr := fmt.Sprintf("%v", url)
-				if url != "" {
-					wg.Add(1)
-					go func() {
-						defer wg.Done()
-						_, chain, err := GetChainCert(indexStr, urlStr)
-						if err != nil {
-							fmt.Printf("Error getting Cert Chain: %v", err.Error())
-							return
-						}
-						certificates, err := DecodePemsToX509(chain)
-						if err != nil {
-							fmt.Printf("%s", err.Error())
-						}
-						if certificates == nil {
-							fmt.Print("No certs decoded.\n")
-						} else {
-
-						}
-					}()
-				}
-			}
-		}
-		wg.Wait()
-	}
-}
 
 func IterateBlock(blockTime int){
 	// Establish connection to MongoDB
@@ -185,10 +113,10 @@ func IterateBlock(blockTime int){
 	findOptions.SetNoCursorTimeout(true)
 	findOptions.SetBatchSize(5000)
 
-	col := client.Database(dbName).Collection(dbCollection)
+	col := client.Database(dbName).Collection(fmt.Sprintf("%d", blockTime))
 
 	// Passing bson.D{{}} as the filter matches all documents in the collection
-	cur, err := col.Find(context.TODO(), bson.D{{"Time", blockTime}}, findOptions)
+	cur, err := col.Find(context.TODO(), bson.D{}, findOptions)
 	if err != nil {
 		fmt.Println("Error when collecting")
 	}
