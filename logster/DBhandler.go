@@ -223,7 +223,11 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 
 			return AppendNewStatus(col, rett, time.Now(), a)			
 		}else if crl != nil && crl != ""{
-			if revoc.IsCertInCRL(crl.(string), serial.(string)){
+			inCRL, err := revoc.IsCertInCRL(crl.(string), serial.(string))
+			if err != nil {
+				return err
+			}
+			if inCRL{
 				fmt.Println("CRL WAS FOUND \n")
 				return AppendNewStatus(col, rett, time.Now(), "Revoked")
 			}
