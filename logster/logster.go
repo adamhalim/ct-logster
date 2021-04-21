@@ -44,6 +44,7 @@ type CertInfo struct {
 type StatusUpdate struct{
 	Status 	string
 	Time 	time.Time
+	IsError bool
 }
 
 type ChainCertPem struct {

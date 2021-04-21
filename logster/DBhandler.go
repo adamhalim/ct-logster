@@ -120,7 +120,7 @@ func IterateBlock(blockTime int){
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
-	//findOptions.SetNoCursorTimeout(true)
+	findOptions.SetNoCursorTimeout(true)
 	findOptions.SetBatchSize(5000)
 
 	col := client.Database(dbName).Collection(fmt.Sprintf("%d", blockTime))
@@ -197,7 +197,7 @@ func contains(s []string, str string) int {
 }
 
 func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col mongo.Collection)(erro error){
-
+	isError := false
 	// convert id string to ObjectId
 	objID, err := primitive.ObjectIDFromHex(chainStringID)
 	if err != nil{
@@ -214,15 +214,17 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 
 	b, err := DecodePemsToX509(result.PEM)
 	if err != nil{
+		isError = true
 		//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
-		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())))
+		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
 	}
 
 	cert := element["cert"]
 	c, err := DecodePemsToX509(cert.(string))
 	if err != nil{
+		isError = true
 		//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
-		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())))
+		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
 	}
 
 	if len(b) == 0{
@@ -236,21 +238,24 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 		if ocspURL != nil{
 			a, err :=revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
 			if err != nil{
+				isError = true
 				//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
-				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())))
+				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
 			}
 			updateCount()
 
-			return AppendNewStatus(col, rett, time.Now(), a)			
+			return AppendNewStatus(col, rett, time.Now(), a, isError)
 		}else if crl != nil && crl != ""{
 			inCRL, err := revoc.IsCertInCRL(crl.(string), serial.(string))
 			if err != nil {
+				isError = true
 				//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
-				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())))
+				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
 			}
 			if inCRL{
 				fmt.Println("CRL WAS FOUND \n")
-				return AppendNewStatus(col, rett, time.Now(), "Revoked")
+				//If the request is a success the flag should be false
+				return AppendNewStatus(col, rett, time.Now(), "Revoked", isError)
 			}
 		}
 		return errors.New("OCSP-URL not found!")
@@ -287,7 +292,7 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 
 //status should only be: Good, Unknown, Revoked or Unexcpected.
 //Unexcpeted will probably be handled earlier in code. But should still be handled here too
-func AppendNewStatus(collection mongo.Collection, certID string, changeTime time.Time, status string) (erro error){
+func AppendNewStatus(collection mongo.Collection, certID string, changeTime time.Time, status string, isErr bool) (erro error){
 
    // Read Once
     var res CertInfo
@@ -306,13 +311,13 @@ func AppendNewStatus(collection mongo.Collection, certID string, changeTime time
     if s > 0{
         lastElem := res.Changes[s-1]
         if lastElem.Status != status{
-            newEntry := StatusUpdate{status, changeTime}
+            newEntry := StatusUpdate{status, changeTime, isErr}
             res.Changes = append(res.Changes, newEntry)
             update = true
         }
     }else {
         if status != "Good" && status != ""{
-            newEntry := StatusUpdate{status, changeTime}
+            newEntry := StatusUpdate{status, changeTime, isErr}
             res.Changes = append(res.Changes, newEntry)
             update = true
         }
@@ -321,7 +326,7 @@ func AppendNewStatus(collection mongo.Collection, certID string, changeTime time
     //Actual update to MongoDB. Could possibly be done in batches for better performance
     if update{
         //change, err := bson.Marshal(res)
-		fmt.Printf("We updated certID: %s with new data!! \n\n", certID)
+		fmt.Printf("We updated certID: %s with new data: %s!! \n\n", certID, status)
 		update := bson.M{
         "$set": res,
 		}
