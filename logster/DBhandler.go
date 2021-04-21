@@ -16,9 +16,19 @@ import (
 	"os"
 	"time"
 	"errors"
+	"strconv"
 )
 
+const(
+	unAuth = "ocsp: error from server: unauthorized"
+	verErr = "bad OCSP signature: crypto/rsa: verification error"
+	malFor = "ocsp: error from server: malformed"
+	badSig = "bad OCSP signature: x509: signature algorithm specifies an ECDSA public key, but have public key of type *rsa.PublicKey"
+	notOK = "Status for request no OK"
+	other = "Other error"
+)
 
+var commonErrors  = []string{unAuth, verErr, malFor, badSig, notOK}
 var dbUsername, dbPassword, dbIp, dbPort, dbName, dbChainCollection string
 
 // Loads .env file
@@ -123,7 +133,7 @@ func IterateBlock(blockTime int){
 	count :=0
 	//Number of go-rutines that can run at the same time.
 	//Aquisition is done withing the loop
-	var sem = semaphore.NewWeighted(500)
+	var sem = semaphore.NewWeighted(700)
 
 	start := time.Now()
 	// Finding multiple documents returns a cursor
@@ -176,6 +186,16 @@ func updateCount(){
 	countS++
 }
 
+func contains(s []string, str string) int {
+	for i, v := range s {
+		if v == str {
+			return i
+		}
+	}
+	//numer 6 specifies that the error is of type "Other error"
+	return 6
+}
+
 func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col mongo.Collection)(erro error){
 
 	// convert id string to ObjectId
@@ -188,20 +208,22 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 	var result ChainCertPem
 	col2.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&result)
 
+	ocspURL := element["OCSP"]
+	elemID := element["_id"]
+	rett := elemID.(primitive.ObjectID).Hex()
+
 	b, err := DecodePemsToX509(result.PEM)
 	if err != nil{
-		return err
+		//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
+		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())))
 	}
 
 	cert := element["cert"]
 	c, err := DecodePemsToX509(cert.(string))
 	if err != nil{
-		return err
+		//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
+		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())))
 	}
-
-	ocspURL := element["OCSP"]
-	elemID := element["_id"]
-
 
 	if len(b) == 0{
 		return errors.New("Chain PEM was not found correctly (Len of chain PEM == 0)")
@@ -210,12 +232,12 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 	}else {
 		crl := element["CRL"]
 		serial := element["serialNumber"]
-		rett := elemID.(primitive.ObjectID).Hex()
 
 		if ocspURL != nil{
 			a, err :=revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
 			if err != nil{
-				return err
+				//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
+				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())))
 			}
 			updateCount()
 
@@ -223,7 +245,8 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 		}else if crl != nil && crl != ""{
 			inCRL, err := revoc.IsCertInCRL(crl.(string), serial.(string))
 			if err != nil {
-				return err
+				//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
+				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())))
 			}
 			if inCRL{
 				fmt.Println("CRL WAS FOUND \n")
