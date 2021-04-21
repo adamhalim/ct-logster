@@ -167,7 +167,6 @@ func revocMain(){
 	fmt.Println("We running revocMain!")
 	actualTime := time.Now()
 	hour := actualTime.Hour()
-	hour += 23
 	fmt.Println(hour)
 	IterateBlock(hour)
 }

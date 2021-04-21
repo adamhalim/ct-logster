@@ -110,7 +110,7 @@ func IterateBlock(blockTime int){
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
-	findOptions.SetNoCursorTimeout(true)
+	//findOptions.SetNoCursorTimeout(true)
 	findOptions.SetBatchSize(5000)
 
 	col := client.Database(dbName).Collection(fmt.Sprintf("%d", blockTime))
@@ -126,7 +126,6 @@ func IterateBlock(blockTime int){
 	var sem = semaphore.NewWeighted(500)
 
 	start := time.Now()
-
 	// Finding multiple documents returns a cursor
  	// Iterating through the cursor allows us to decode documents one at a time
 	for cur.Next(context.TODO()) {
@@ -150,7 +149,6 @@ func IterateBlock(blockTime int){
 			log.Printf("Failed to acquire semaphore: %v", err)
 			break
 		}
-
 		go func() {
 			defer sem.Release(1)
 			//CALL METHOD TO CHECK OCSP

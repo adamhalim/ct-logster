@@ -31,7 +31,6 @@ func downloadCRL(url string) (response *http.Response, err error) {
 }
 
 // Checks to see if a certificate is in the .crl
-// TODO: Should return error and bool!!!
 func IsCertInCRL(crlURL string, serialnumber string) (bool, error)  {
 	crl, err := downloadCRL(crlURL)
 	if err != nil {
