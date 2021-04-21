@@ -328,7 +328,7 @@ func logMain() {
 					// we skip the entire batch of new certificates to avoid attempting
 					// to parse it again. This happens extremely rarely and shouldn't
 					// have any noticable impact on the amount of certificates missed.
-					CTLogs[ind].updateCurrentIndex(currSTH)
+					CTLogs[ind].currentIndex = currSTH
 					return
 				}
 
@@ -383,7 +383,7 @@ func logMain() {
 			// each successful entry perhaps and update each entry?
 			// Another option is doing insertion in batches.
 			// We either insert all, or nothing.
-			CTLogs[ind].updateCurrentIndex(currSTH)
+			CTLogs[ind].currentIndex = currSTH
 		}(index)
 		index++
 		elapsedTime += 0.5
@@ -392,12 +392,6 @@ func logMain() {
 			fmt.Printf("Certs per second: %.2f\n", float32(counter)/float32(time.Since(start).Seconds()))
 		}
 	}
-}
-
-// Updates the CTLog's current index to the current tree size.
-// This function should be protected from race conditions.
-func (ctlog CTLog) updateCurrentIndex(currSTH uint64) {
-	ctlog.currentIndex = currSTH
 }
 
 func setLogNotInUse(ctlog *CTLog) {
