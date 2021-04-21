@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -55,56 +56,12 @@ var CTLogs []CTLog
 
 func init() {
 
-	ctLogURLs := []string{"ct.browser.360.cn/2021/",
-		"ct.browser.360.cn/2022/",
-		"ct.cloudflare.com/logs/nimbus2021/",
-		"ct.cloudflare.com/logs/nimbus2022/",
-		"ct.cloudflare.com/logs/nimbus2023/",
-		"ct.googleapis.com/icarus/",
-		"ct.googleapis.com/logs/argon2018/",
-		"ct.googleapis.com/logs/argon2019/",
-		"ct.googleapis.com/logs/argon2020/",
-		"ct.googleapis.com/logs/argon2021/",
-		"ct.googleapis.com/logs/argon2022/",
-		"ct.googleapis.com/logs/argon2023/",
-		"ct.googleapis.com/logs/crucible/",
-		"ct.googleapis.com/logs/solera2021/",
-		"ct.googleapis.com/logs/solera2022/",
-		"ct.googleapis.com/logs/xenon2020/",
-		"ct.googleapis.com/logs/xenon2021/",
-		"ct.googleapis.com/logs/xenon2022/",
-		"ct.googleapis.com/logs/xenon2023/",
-		"ct.googleapis.com/pilot/",
-		"ct.googleapis.com/rocketeer/",
-		"ct.googleapis.com/skydiver/",
-		"ct.googleapis.com/submariner/",
-		"ct.googleapis.com/testtube/",
-		"ct.trustasia.com/log2022/",
-		"ct.trustasia.com/log2023/",
-		"ct1.digicert-ct.com/log/",
-		"ct2021.trustasia.com/log2021/",
-		"dodo.ct.comodo.com/",
-		"mammoth.ct.comodo.com/",
-		"nessie2021.ct.digicert.com/log/",
-		"nessie2022.ct.digicert.com/log/",
-		"nessie2023.ct.digicert.com/log/",
-		"oak.ct.letsencrypt.org/2021/",
-		"oak.ct.letsencrypt.org/2022/",
-		"oak.ct.letsencrypt.org/2023/",
-		"sabre.ct.comodo.com/",
-		"testflume.ct.letsencrypt.org/2021/",
-		"testflume.ct.letsencrypt.org/2022/",
-		"testflume.ct.letsencrypt.org/2023/",
-		"yeti2021.ct.digicert.com/log/",
-		"yeti2022.ct.digicert.com/log/",
-		"yeti2023.ct.digicert.com/log/"}
-
-	logs = ctLogURLs
 	// Only init all LogClients if we are 
 	// running logster.
 	if len(os.Args)>1{
 		if os.Args[1] == "log" {
 			initLogClients()
+			logs = loadLogsFromFile()
 		}
 	}
 
@@ -395,4 +352,25 @@ func logMain() {
 
 func setLogNotInUse(ctlog *CTLog) {
 	ctlog.inUse = false
+}
+
+// Reads all ctlog URLs from file
+func loadLogsFromFile() []string {
+	fileName := "logs.txt"
+	file, err := os.Open(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	
+	var logArray []string
+	for scanner.Scan() {
+		logArray = append(logArray, scanner.Text())
+	}
+	// If the file was empty, quit.
+	if len(logArray) < 1 {
+		log.Fatal(fmt.Sprintf( "No CTLogs found in %s.\n", fileName))
+	}
+	return logArray
 }
