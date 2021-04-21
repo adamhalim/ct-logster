@@ -326,7 +326,7 @@ func AppendNewStatus(collection mongo.Collection, certID string, changeTime time
     //Actual update to MongoDB. Could possibly be done in batches for better performance
     if update{
         //change, err := bson.Marshal(res)
-		fmt.Printf("We updated certID: %s with new data: %s!! \n\n", certID, status)
+		//fmt.Printf("We updated certID: %s with new data: %s!! \n\n", certID, status)
 		update := bson.M{
         "$set": res,
 		}
