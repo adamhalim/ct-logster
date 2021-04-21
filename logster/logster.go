@@ -60,8 +60,8 @@ func init() {
 	// running logster.
 	if len(os.Args)>1{
 		if os.Args[1] == "log" {
-			initLogClients()
 			logs = loadLogsFromFile()
+			initLogClients()
 		}
 	}
 
