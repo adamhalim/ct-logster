@@ -56,8 +56,14 @@ var CTLogs []CTLog
 
 func init() {
 
-	logs = loadLogsFromFile()
-	initLogClients()
+	// Only init all LogClients if we are 
+	// running logster.
+	if len(os.Args)>1{
+		if os.Args[1] == "log" {
+			initLogClients()
+			logs = loadLogsFromFile()
+		}
+	}
 
 	err := godotenv.Load()
 	if err != nil {
@@ -124,7 +130,6 @@ func revocMain(){
 	fmt.Println("We running revocMain!")
 	actualTime := time.Now()
 	hour := actualTime.Hour()
-	hour += 23
 	fmt.Println(hour)
 	IterateBlock(hour)
 }
