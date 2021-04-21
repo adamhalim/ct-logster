@@ -204,9 +204,9 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 
 
 	if len(b) == 0{
-		return errors.New("Chain PEM was not found correctly")
+		return errors.New("Chain PEM was not found correctly (Len of chain PEM == 0)")
 	}else if len(c) == 0{
-		return errors.New("Cert PEM was not giving correct info")
+		return errors.New("Cert PEM was not giving correct info (Len of cert PEM == 0)")
 	}else {
 		crl := element["CRL"]
 		serial := element["serialNumber"]
