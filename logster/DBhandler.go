@@ -17,6 +17,7 @@ import (
 	"time"
 	"errors"
 	"strconv"
+	"sync"
 )
 
 const(
@@ -135,6 +136,8 @@ func IterateBlock(blockTime int){
 	//Aquisition is done withing the loop
 	var sem = semaphore.NewWeighted(700)
 
+	var wg sync.WaitGroup
+
 	start := time.Now()
 	// Finding multiple documents returns a cursor
  	// Iterating through the cursor allows us to decode documents one at a time
@@ -159,8 +162,10 @@ func IterateBlock(blockTime int){
 			log.Printf("Failed to acquire semaphore: %v", err)
 			break
 		}
+		wg.Add(1)
 		go func() {
 			defer sem.Release(1)
+			defer wg.Done()
 			//CALL METHOD TO CHECK OCSP
 			erro := checkOCSP(elem, certIn.Chain[0], client, *col)
 			if erro != nil{
@@ -172,6 +177,11 @@ func IterateBlock(blockTime int){
 			fmt.Printf("Reqs / s: %.2f\n", float64(count) / float64(time.Since(start).Seconds()))
 		}
 	}
+	// Wait until all routines have finished running before continuing.
+	// Since lots of OCSP requests have a long timeout, this can create a delay
+	// of a couple of minutes, while still waiting for some requests to finish
+	// or get timed out.
+	wg.Wait()
 	fmt.Printf("Count: %d, Count Success: %d, Hour: %d ", count, countS, blockTime)
 	if err := cur.Err(); err != nil {
 		//log.Fatal(err)
