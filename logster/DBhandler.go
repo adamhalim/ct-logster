@@ -16,9 +16,19 @@ import (
 	"os"
 	"time"
 	"errors"
+	"strconv"
 )
 
+const(
+	unAuth = "ocsp: error from server: unauthorized"
+	verErr = "bad OCSP signature: crypto/rsa: verification error"
+	malFor = "ocsp: error from server: malformed"
+	badSig = "bad OCSP signature: x509: signature algorithm specifies an ECDSA public key, but have public key of type *rsa.PublicKey"
+	notOK = "Status for request no OK"
+	other = "Other error"
+)
 
+var commonErrors  = []string{unAuth, verErr, malFor, badSig, notOK}
 var dbUsername, dbPassword, dbIp, dbPort, dbName, dbChainCollection string
 
 // Loads .env file
@@ -123,10 +133,9 @@ func IterateBlock(blockTime int){
 	count :=0
 	//Number of go-rutines that can run at the same time.
 	//Aquisition is done withing the loop
-	var sem = semaphore.NewWeighted(500)
+	var sem = semaphore.NewWeighted(700)
 
 	start := time.Now()
-
 	// Finding multiple documents returns a cursor
  	// Iterating through the cursor allows us to decode documents one at a time
 	for cur.Next(context.TODO()) {
@@ -150,7 +159,6 @@ func IterateBlock(blockTime int){
 			log.Printf("Failed to acquire semaphore: %v", err)
 			break
 		}
-
 		go func() {
 			defer sem.Release(1)
 			//CALL METHOD TO CHECK OCSP
@@ -178,8 +186,18 @@ func updateCount(){
 	countS++
 }
 
-func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col mongo.Collection)(erro error){
+func contains(s []string, str string) int {
+	for i, v := range s {
+		if v == str {
+			return i
+		}
+	}
+	//numer 6 specifies that the error is of type "Other error"
+	return 6
+}
 
+func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col mongo.Collection)(erro error){
+	isError := false
 	// convert id string to ObjectId
 	objID, err := primitive.ObjectIDFromHex(chainStringID)
 	if err != nil{
@@ -190,42 +208,54 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 	var result ChainCertPem
 	col2.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&result)
 
+	ocspURL := element["OCSP"]
+	elemID := element["_id"]
+	rett := elemID.(primitive.ObjectID).Hex()
+
 	b, err := DecodePemsToX509(result.PEM)
 	if err != nil{
-		return err
+		isError = true
+		//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
+		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
 	}
 
 	cert := element["cert"]
 	c, err := DecodePemsToX509(cert.(string))
 	if err != nil{
-		return err
+		isError = true
+		//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
+		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
 	}
 
-	ocspURL := element["OCSP"]
-	elemID := element["_id"]
-
-
 	if len(b) == 0{
-		return errors.New("Chain PEM was not found correctly")
+		return errors.New("Chain PEM was not found correctly (Len of chain PEM == 0)")
 	}else if len(c) == 0{
-		return errors.New("Cert PEM was not giving correct info")
+		return errors.New("Cert PEM was not giving correct info (Len of cert PEM == 0)")
 	}else {
 		crl := element["CRL"]
 		serial := element["serialNumber"]
-		rett := elemID.(primitive.ObjectID).Hex()
 
 		if ocspURL != nil{
 			a, err :=revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
 			if err != nil{
-				return err
+				isError = true
+				//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
+				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
 			}
 			updateCount()
 
-			return AppendNewStatus(col, rett, time.Now(), a)			
+			return AppendNewStatus(col, rett, time.Now(), a, isError)
 		}else if crl != nil && crl != ""{
-			if revoc.IsCertInCRL(crl.(string), serial.(string)){
+			inCRL, err := revoc.IsCertInCRL(crl.(string), serial.(string))
+			if err != nil {
+				isError = true
+				//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
+				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
+			}
+			if inCRL{
 				fmt.Println("CRL WAS FOUND \n")
-				return AppendNewStatus(col, rett, time.Now(), "Revoked")
+				//If the request is a success the flag should be false
+				return AppendNewStatus(col, rett, time.Now(), "Revoked", isError)
 			}
 		}
 		return errors.New("OCSP-URL not found!")
@@ -262,7 +292,7 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 
 //status should only be: Good, Unknown, Revoked or Unexcpected.
 //Unexcpeted will probably be handled earlier in code. But should still be handled here too
-func AppendNewStatus(collection mongo.Collection, certID string, changeTime time.Time, status string) (erro error){
+func AppendNewStatus(collection mongo.Collection, certID string, changeTime time.Time, status string, isErr bool) (erro error){
 
    // Read Once
     var res CertInfo
@@ -281,13 +311,13 @@ func AppendNewStatus(collection mongo.Collection, certID string, changeTime time
     if s > 0{
         lastElem := res.Changes[s-1]
         if lastElem.Status != status{
-            newEntry := StatusUpdate{status, changeTime}
+            newEntry := StatusUpdate{status, changeTime, isErr}
             res.Changes = append(res.Changes, newEntry)
             update = true
         }
     }else {
         if status != "Good" && status != ""{
-            newEntry := StatusUpdate{status, changeTime}
+            newEntry := StatusUpdate{status, changeTime, isErr}
             res.Changes = append(res.Changes, newEntry)
             update = true
         }
@@ -296,7 +326,7 @@ func AppendNewStatus(collection mongo.Collection, certID string, changeTime time
     //Actual update to MongoDB. Could possibly be done in batches for better performance
     if update{
         //change, err := bson.Marshal(res)
-		fmt.Printf("We updated certID: %s with new data!! \n\n", certID)
+		//fmt.Printf("We updated certID: %s with new data: %s!! \n\n", certID, status)
 		update := bson.M{
         "$set": res,
 		}

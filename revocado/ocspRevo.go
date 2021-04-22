@@ -14,6 +14,7 @@ import (
 	"crypto/x509/pkix"
 	"crypto"
 	"math/rand"
+	"strconv"
 )
 
 
@@ -50,11 +51,13 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
     }
 
     if err != nil {
-        return nil, errors.New("Error making get/post request")
+        return nil, err
     }
 
     if resp.StatusCode != http.StatusOK {
-        return nil, errors.New("Status for request not OK")
+		respStat := "Status ="
+		respStat = respStat + strconv.Itoa(resp.StatusCode)
+        return nil, errors.New(respStat)
     }
 
     body, err := ioutil.ReadAll(resp.Body)
