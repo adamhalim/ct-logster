@@ -30,6 +30,7 @@ func GetOCSP(url string, issuer *x509.Certificate, cert *x509.Certificate) (stat
 	} else if ocspResp.Status == ocsp.Unknown {
 		return "Unknown", nil
 	} else if ocspResp.Status == ocsp.Revoked {
+		fmt.Println(ocspResp.RevocationReason)
 		return "Revoked", nil
 	} else {
 		return "Unexcpected", nil
