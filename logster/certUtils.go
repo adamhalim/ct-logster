@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	revoc "revocado"
+	
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/client"
 	"github.com/google/certificate-transparency-go/jsonclient"
@@ -377,4 +379,34 @@ func hourOffsetInBounds(ctlog CTLog, timeNow time.Time, hours float64) (bool, er
 		return false, errors.New(fmt.Sprintf("Offset of %.2f hours is greater than first entry in log.", hours))
 	}
 	return true, nil
+}
+
+// Returns the cert chain with the correct issuer's certificate 
+// as the first index. This cert can be used for OCSP requests.
+func PutIssuerCertFirst(url string, chain []string, cert x509.Certificate) ([]string, error) {
+// For a given cert chain, most of the times the first index is the actual
+// issuer's certificate that we can use for OCSP requests. 
+// From what we know, there is no deterministic way of finding out
+// which cert in the chain is the correct one for OCSP requests.
+// This function runs through all certs in the chain and runs an 
+// OCSP request with each cert. If a request is successful, we
+// move that cert to index 0.
+	for index, chainPEM := range chain {
+		chainx509, err := DecodePemsToX509(chainPEM)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = revoc.GetOCSP(url, &chainx509[0], &cert)
+
+		// If the request returned without an error, we know
+		// that it was succesful.
+		if err == nil {
+			correctCert := chain[index]
+			newChainArray := append([]string{correctCert}, append(chain[:index], chain[index+1:]...)...)
+			return newChainArray, nil
+		}
+	}
+
+	return nil, errors.New("No certificate in chain yielded valid OCSP response.")
 }
