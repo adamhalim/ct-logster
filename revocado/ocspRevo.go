@@ -15,6 +15,7 @@ import (
 	"crypto"
 	"math/rand"
 	"strconv"
+	"time"
 )
 
 
@@ -30,7 +31,8 @@ func GetOCSP(url string, issuer *x509.Certificate, cert *x509.Certificate) (stat
 	} else if ocspResp.Status == ocsp.Unknown {
 		return "Unknown", nil
 	} else if ocspResp.Status == ocsp.Revoked {
-		return "Revoked", nil
+		reason := "Revoked:" + strconv.Itoa(ocspResp.RevocationReason)
+		return reason, nil
 	} else {
 		return "Unexcpected", nil
 	}
@@ -42,15 +44,19 @@ func GetOCSP(url string, issuer *x509.Certificate, cert *x509.Certificate) (stat
 func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResponse *ocsp.Response, err error) {
     var resp *http.Response
 
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
     if len(req) > 256 {
         buf := bytes.NewBuffer(req)
-        resp, err = http.Post(url, "application/ocsp-request", buf)
+        resp, err = client.Post(url, "application/ocsp-request", buf)
     } else {
         reqURL := url + "/" + base64.StdEncoding.EncodeToString(req)
-        resp, err = http.Get(reqURL)
+        resp, err = client.Get(reqURL)
     }
 
-    if err != nil {
+	if err != nil {
         return nil, err
     }
 
@@ -64,8 +70,8 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
     if err != nil {
         return nil, errors.New("Could not read body")
     }
-    resp.Body.Close()
 
+	resp.Body.Close()
     return ocsp.ParseResponse(body, issuer)
 }
 

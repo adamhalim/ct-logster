@@ -132,6 +132,7 @@ func IterateBlock(blockTime int){
 		fmt.Println("Error when collecting")
 	}
 	count :=0
+	countS = 0
 	//Number of go-rutines that can run at the same time.
 	//Aquisition is done withing the loop
 	var sem = semaphore.NewWeighted(700)
@@ -173,7 +174,7 @@ func IterateBlock(blockTime int){
 			}
 		}()
 		count++
-		if count % 100 == 0 {
+		if count % 1000 == 0 {
 			fmt.Printf("Reqs / s: %.2f\n", float64(count) / float64(time.Since(start).Seconds()))
 		}
 	}
