@@ -56,8 +56,6 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
         resp, err = client.Get(reqURL)
     }
 
-    defer resp.Body.Close()
-
 	if err != nil {
         return nil, err
     }
@@ -73,7 +71,7 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
         return nil, errors.New("Could not read body")
     }
 
-
+	resp.Body.Close()
     return ocsp.ParseResponse(body, issuer)
 }
 
