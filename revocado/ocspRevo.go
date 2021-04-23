@@ -61,7 +61,7 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
     }
 
     if resp.StatusCode != http.StatusOK {
-		respStat := "Status ="
+		respStat := "Status:"
 		respStat = respStat + strconv.Itoa(resp.StatusCode)
         return nil, errors.New(respStat)
     }
