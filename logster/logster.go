@@ -286,6 +286,13 @@ func logMain() {
 				x509ParsedCert, err := DecodePemsToX509(cert[i].PEM)
 				if err != nil {
 					fmt.Printf("Error parsing certs to x509: %v", err.Error())
+					// If this fails, there probably is an error in the certificate
+					// which stops it from being parsed correctly. When this happens,
+					// we skip the entire batch of new certificates to avoid attempting
+					// to parse it again. This happens extremely rarely and shouldn't
+					// have any noticable impact on the amount of certificates missed.
+					skipBatchPrint(CTLogs[ind], currSTH)
+					CTLogs[ind].currentIndex = currSTH
 					return
 				}
 
@@ -353,6 +360,21 @@ func logMain() {
 
 func setLogNotInUse(ctlog *CTLog) {
 	ctlog.inUse = false
+}
+
+// Prints which log the error was caused by, what the log's current
+// index is and what the log's current tree size, as well as how many
+// log entries were skipped.
+// TODO: Maybe use log instead of fmt? Not sure how to get
+// the output to file though if redirecting output to file.
+// (log doesn't seem to go to stdout?)
+func skipBatchPrint(ctlog CTLog, currSTH uint64) {
+	fmt.Printf("******************************\n")
+	fmt.Printf("Error caused Logster to skip entire batch.\n")
+	fmt.Printf("CTLog URL: %s.\n", ctlog.logClient.BaseURI())
+	fmt.Printf("Current index: %d. Current tree size: %d.\n", ctlog.currentIndex, currSTH)
+	fmt.Printf("Log entries skipped: %d.\n", currSTH - ctlog.currentIndex + 1)
+	fmt.Printf("******************************\n")
 }
 
 // Reads all ctlog URLs from file
