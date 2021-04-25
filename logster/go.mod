@@ -11,4 +11,5 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	revocado v0.0.0
 )
-replace "revocado" => "../revocado"
+
+replace revocado => ../revocado
