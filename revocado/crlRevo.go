@@ -31,26 +31,25 @@ func downloadCRL(url string) (response *http.Response, err error) {
 }
 
 // Checks to see if a certificate is in the .crl
-// TODO: Should return error and bool!!!
-func IsCertInCRL(crlURL string, serialnumber string) bool {
+func IsCertInCRL(crlURL string, serialnumber string) (bool, error)  {
 	crl, err := downloadCRL(crlURL)
 	if err != nil {
 		fmt.Printf("%s", err)
-		return false
+		return false, err
 	}
 
 	// Convert response body to []byte array
 	crlArray, err := ioutil.ReadAll(crl.Body)
 	if err != nil {
 		fmt.Printf("%s", err)
-		return false
+		return false, err
 	}
 
 	// We parse the CRL file.
 	certList, err := x509.ParseCRL(crlArray)
 	if err != nil {
 		fmt.Printf("%s", err)
-		return false
+		return false, err
 	}
 
 	validCert := false
@@ -64,5 +63,5 @@ func IsCertInCRL(crlURL string, serialnumber string) bool {
 			break
 		}
 	}
-	return validCert
+	return validCert, nil
 }

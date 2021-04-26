@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -44,6 +45,7 @@ type CertInfo struct {
 type StatusUpdate struct{
 	Status 	string
 	Time 	time.Time
+	IsError bool
 }
 
 type ChainCertPem struct {
@@ -55,52 +57,14 @@ var CTLogs []CTLog
 
 func init() {
 
-	ctLogURLs := []string{"ct.browser.360.cn/2021/",
-		"ct.browser.360.cn/2022/",
-		"ct.cloudflare.com/logs/nimbus2021/",
-		"ct.cloudflare.com/logs/nimbus2022/",
-		"ct.cloudflare.com/logs/nimbus2023/",
-		"ct.googleapis.com/icarus/",
-		"ct.googleapis.com/logs/argon2018/",
-		"ct.googleapis.com/logs/argon2019/",
-		"ct.googleapis.com/logs/argon2020/",
-		"ct.googleapis.com/logs/argon2021/",
-		"ct.googleapis.com/logs/argon2022/",
-		"ct.googleapis.com/logs/argon2023/",
-		"ct.googleapis.com/logs/crucible/",
-		"ct.googleapis.com/logs/solera2021/",
-		"ct.googleapis.com/logs/solera2022/",
-		"ct.googleapis.com/logs/xenon2020/",
-		"ct.googleapis.com/logs/xenon2021/",
-		"ct.googleapis.com/logs/xenon2022/",
-		"ct.googleapis.com/logs/xenon2023/",
-		"ct.googleapis.com/pilot/",
-		"ct.googleapis.com/rocketeer/",
-		"ct.googleapis.com/skydiver/",
-		"ct.googleapis.com/submariner/",
-		"ct.googleapis.com/testtube/",
-		"ct.trustasia.com/log2022/",
-		"ct.trustasia.com/log2023/",
-		"ct1.digicert-ct.com/log/",
-		"ct2021.trustasia.com/log2021/",
-		"dodo.ct.comodo.com/",
-		"mammoth.ct.comodo.com/",
-		"nessie2021.ct.digicert.com/log/",
-		"nessie2022.ct.digicert.com/log/",
-		"nessie2023.ct.digicert.com/log/",
-		"oak.ct.letsencrypt.org/2021/",
-		"oak.ct.letsencrypt.org/2022/",
-		"oak.ct.letsencrypt.org/2023/",
-		"sabre.ct.comodo.com/",
-		"testflume.ct.letsencrypt.org/2021/",
-		"testflume.ct.letsencrypt.org/2022/",
-		"testflume.ct.letsencrypt.org/2023/",
-		"yeti2021.ct.digicert.com/log/",
-		"yeti2022.ct.digicert.com/log/",
-		"yeti2023.ct.digicert.com/log/"}
-
-	logs = ctLogURLs
-	initLogClients()
+	// Only init all LogClients if we are 
+	// running logster.
+	if len(os.Args)>1{
+		if os.Args[1] == "log" {
+			logs = loadLogsFromFile()
+			initLogClients()
+		}
+	}
 
 	err := godotenv.Load()
 	if err != nil {
@@ -167,7 +131,6 @@ func revocMain(){
 	fmt.Println("We running revocMain!")
 	actualTime := time.Now()
 	hour := actualTime.Hour()
-	hour += 23
 	fmt.Println(hour)
 	IterateBlock(hour)
 }
@@ -323,6 +286,13 @@ func logMain() {
 				x509ParsedCert, err := DecodePemsToX509(cert[i].PEM)
 				if err != nil {
 					fmt.Printf("Error parsing certs to x509: %v", err.Error())
+					// If this fails, there probably is an error in the certificate
+					// which stops it from being parsed correctly. When this happens,
+					// we skip the entire batch of new certificates to avoid attempting
+					// to parse it again. This happens extremely rarely and shouldn't
+					// have any noticable impact on the amount of certificates missed.
+					skipBatchPrint(CTLogs[ind], currSTH)
+					CTLogs[ind].currentIndex = currSTH
 					return
 				}
 
@@ -390,4 +360,40 @@ func logMain() {
 
 func setLogNotInUse(ctlog *CTLog) {
 	ctlog.inUse = false
+}
+
+// Prints which log the error was caused by, what the log's current
+// index is and what the log's current tree size, as well as how many
+// log entries were skipped.
+// TODO: Maybe use log instead of fmt? Not sure how to get
+// the output to file though if redirecting output to file.
+// (log doesn't seem to go to stdout?)
+func skipBatchPrint(ctlog CTLog, currSTH uint64) {
+	fmt.Printf("******************************\n")
+	fmt.Printf("Error caused Logster to skip entire batch.\n")
+	fmt.Printf("CTLog URL: %s.\n", ctlog.logClient.BaseURI())
+	fmt.Printf("Current index: %d. Current tree size: %d.\n", ctlog.currentIndex, currSTH)
+	fmt.Printf("Log entries skipped: %d.\n", currSTH - ctlog.currentIndex + 1)
+	fmt.Printf("******************************\n")
+}
+
+// Reads all ctlog URLs from file
+func loadLogsFromFile() []string {
+	fileName := "logs.txt"
+	file, err := os.Open(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	
+	var logArray []string
+	for scanner.Scan() {
+		logArray = append(logArray, scanner.Text())
+	}
+	// If the file was empty, quit.
+	if len(logArray) < 1 {
+		log.Fatal(fmt.Sprintf( "No CTLogs found in %s.\n", fileName))
+	}
+	return logArray
 }
