@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"strconv"
 	"time"
+	"strings"
 )
 
 
@@ -57,7 +58,10 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
     }
 
 	if err != nil {
-        return nil, err
+		if strings.Contains(err.Error(),"net/http: request canceled while waiting for connection"){
+			return nil, errors.New("request canceled while waiting for connection")
+		}
+		return nil, err
     }
 
     if resp.StatusCode != http.StatusOK {
