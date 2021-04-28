@@ -379,7 +379,7 @@ func skipBatchPrint(ctlog CTLog, currSTH uint64) {
 
 // Reads all ctlog URLs from file
 func loadLogsFromFile() []string {
-	fileName := "logs.txt"
+	fileName := "ctlogs.txt"
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Fatal(err)
