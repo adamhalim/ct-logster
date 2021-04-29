@@ -59,7 +59,6 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
 
 	if err != nil {
 		if strings.Contains(err.Error(),"(Client.Timeout exceeded while awaiting headers)"){
-			fmt.Println("Timeout")
 			return nil, errors.New("request canceled while waiting for connection")
 		}
 		return nil, err
