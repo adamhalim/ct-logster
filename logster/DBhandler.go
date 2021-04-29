@@ -26,10 +26,11 @@ const(
 	malFor = "ocsp: error from server: malformed"
 	badSig = "bad OCSP signature: x509: signature algorithm specifies an ECDSA public key, but have public key of type *rsa.PublicKey"
 	notOK = "Status for request no OK"
+	tOut  = "request canceled while waiting for connection"
 	other = "Other error"
 )
-
-var commonErrors  = []string{unAuth, verErr, malFor, badSig, notOK}
+//Array containing all the constants
+var commonErrors  = []string{unAuth, verErr, malFor, badSig, notOK, tOut}
 var dbUsername, dbPassword, dbIp, dbPort, dbName, dbChainCollection string
 
 // Loads .env file
@@ -197,6 +198,7 @@ func updateCount(){
 	countS++
 }
 
+//TODO: change name and comment better
 func contains(s []string, str string) int {
 	for i, v := range s {
 		if v == str {
@@ -207,6 +209,7 @@ func contains(s []string, str string) int {
 	return 6
 }
 
+//TODO: Change variable names, comments and use GetPemFromID instead of doing it manually!
 func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col mongo.Collection)(erro error){
 	isError := false
 	// convert id string to ObjectId
@@ -266,7 +269,7 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 			if inCRL{
 				fmt.Println("CRL WAS FOUND \n")
 				//If the request is a success the flag should be false
-				return AppendNewStatus(col, rett, time.Now(), "Revoked", isError)
+				return AppendNewStatus(col, rett, time.Now(), "Revoked:7", isError)
 			}
 		}
 		return errors.New("OCSP-URL not found!")
