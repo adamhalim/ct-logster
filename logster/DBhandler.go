@@ -205,8 +205,8 @@ func contains(s []string, str string) int {
 			return i
 		}
 	}
-	//numer 6 specifies that the error is of type "Other error"
-	return 6
+	//len(s) specifies that the error is of type "Other error" should be 7
+	return len(s)+1
 }
 
 //TODO: Change variable names, comments and use GetPemFromID instead of doing it manually!
