@@ -1,0 +1,97 @@
+http://ocsp.godaddy.com/: Avg:45.464399. Mean: 52.300490. Std: 15.045338. Count: 1065 len(val): 1065
+http://r3.o.lencr.org: Avg:9.622498. Mean: 9.098506. Std: 3.302741. Count: 1048 len(val): 1048
+http://ocsp.digicert.com: Avg:30.939119. Mean: 12.593430. Std: 80.013968. Count: 1775 len(val): 1034
+http://ocsp.sectigo.com: Avg:11.419378. Mean: 10.545457. Std: 6.718444. Count: 1081 len(val): 1017
+http://ocsp.sca1b.amazontrust.com: Avg:10.475872. Mean: 10.274441. Std: 4.295254. Count: 1006 len(val): 1006
+http://ocsp.pki.goog/gts1d4: Avg:5.353080. Mean: 4.708341. Std: 2.243432. Count: 1080 len(val): 1004
+http://oneocsp.microsoft.com/ocsp: Avg:4.921268. Mean: 11.333821. Std: 4.706022. Count: 2402 len(val): 1003
+http://zerossl.ocsp.sectigo.com: Avg:1.806153. Mean: 9.726174. Std: 3.978564. Count: 5740 len(val): 975
+http://ocsp.msocsp.com: Avg:9.223354. Mean: 22.235813. Std: 19.909883. Count: 2777 len(val): 1002
+
+http://ocsp.godaddy.com/: Avg:44.719787. Mean: 47.667207. Std: 18.478854. Count: 1066 len(val): 1064
+http://r3.o.lencr.org: Avg:10.538858. Mean: 9.920294. Std: 3.934965. Count: 1055 len(val): 1055
+http://ocsp.digicert.com: Avg:25.247451. Mean: 12.258335. Std: 63.106163. Count: 1753 len(val): 1015
+http://ocsp.sectigo.com: Avg:9.939274. Mean: 9.937426. Std: 3.305750. Count: 1098 len(val): 1034
+http://ocsp.sca1b.amazontrust.com: Avg:10.551695. Mean: 10.882541. Std: 4.165861. Count: 1005 len(val): 1005
+http://ocsp.pki.goog/gts1d4: Avg:5.360650. Mean: 4.694278. Std: 2.359638. Count: 1080 len(val): 1004
+http://oneocsp.microsoft.com/ocsp: Avg:5.666724. Mean: 11.068995. Std: 51.976616. Count: 2402 len(val): 1003
+http://zerossl.ocsp.sectigo.com: Avg:1.777844. Mean: 9.358762. Std: 3.922177. Count: 5739 len(val): 975
+http://ocsp.msocsp.com: Avg:10.902243. Mean: 24.328570. Std: 24.067951. Count: 2776 len(val): 1001
+
+http://ocsp.godaddy.com/: Avg:43.662668. Min: 24.639985. Max: 140.593717 Mean: 46.072310. Std: 14.404578. Count: 1066 len(val): 1065
+http://r3.o.lencr.org: Avg:18.093240. Min: 7.154718. Max: 36.834325 Mean: 17.572505. Std: 3.618571. Count: 1065 len(val): 1065
+http://ocsp.digicert.com: Avg:25.843120. Min: 4.200712. Max: 490.128172 Mean: 12.815116. Std: 82.455868. Count: 1753 len(val): 1014
+http://ocsp.sectigo.com: Avg:55.620362. Min: 5.853585. Max: 188.519942 Mean: 78.187763. Std: 45.397758. Count: 1130 len(val): 1066
+http://ocsp.sca1b.amazontrust.com: Avg:10.485955. Min: 4.301511. Max: 31.559335 Mean: 10.677671. Std: 3.998897. Count: 1006 len(val): 1006
+http://ocsp.pki.goog/gts1d4: Avg:5.552447. Min: 3.996007. Max: 118.711874 Mean: 4.698086. Std: 5.723915. Count: 1080 len(val): 1005
+http://oneocsp.microsoft.com/ocsp: Avg:4.968850. Min: 6.064043. Max: 90.469827 Mean: 11.258556. Std: 5.529517. Count: 2397 len(val): 1001
+http://zerossl.ocsp.sectigo.com: Avg:2.941825. Min: 5.641575. Max: 4086.022851 Mean: 9.655706. Std: 131.509717. Count: 5739 len(val): 973
+http://ocsp.msocsp.com: Avg:8.882950. Min: 9.721183. Max: 176.822181 Mean: 21.700427. Std: 13.999512. Count: 2773 len(val): 1001
+
+http://r3.o.lencr.org: Avg:10.766410. Min: 4.615509. Max: 31.935472 Mean: 9.887729. Std: 4.032797. Count: 1054 len(val): 1054
+http://ocsp.digicert.com: Avg:35.887535. Min: 4.127924. Max: 483.029866 Mean: 11.864691. Std: 110.366932. Count: 1752 len(val): 1014
+http://ocsp.sectigo.com: Avg:11.984061. Min: 5.525884. Max: 1369.508923 Mean: 10.539866. Std: 42.662473. Count: 1090 len(val): 1026
+
+http://ocsp.godaddy.com/: Avg:42.606597. Min: 24.482641. Max: 92.666810 Mean: 43.984193. Std: 13.347235. Count: 1067 len(val): 1065
+http://ocsp.sca1b.amazontrust.com: Avg:10.300665. Min: 4.216112. Max: 56.258752 Mean: 10.433766. Std: 4.202254. Count: 1006 len(val): 1006
+http://ocsp.pki.goog/gts1d4: Avg:5.457216. Min: 3.969095. Max: 15.455685 Mean: 4.760894. Std: 2.447573. Count: 1078 len(val): 1003
+http://oneocsp.microsoft.com/ocsp: Avg:4.807702. Min: 5.990486. Max: 27.013190 Mean: 11.251990. Std: 4.407893. Count: 2398 len(val): 1001
+http://zerossl.ocsp.sectigo.com: Avg:2.364616. Min: 5.680477. Max: 3346.355377 Mean: 9.381238. Std: 106.954459. Count: 5739 len(val): 975
+http://ocsp.msocsp.com: Avg:8.870555. Min: 9.508428. Max: 170.295870 Mean: 21.718406. Std: 13.749606. Count: 2776 len(val): 1001
+
+http://ocsp.sca1b.amazontrust.com: Avg:11.090237. Min: 4.470257. Max: 112.701979 Mean: 10.923913. Std: 6.031873. Count: 1006 len(val): 1006
+http://zerossl.ocsp.sectigo.com: Avg:125.303739. Min: 5.942079. Max: 2147.551687 Mean: 83.226116. Std: 275.254316. Count: 5740 len(val): 972
+http://ocsp.msocsp.com: Avg:222.195404. Min: 9.583570. Max: 915.648961 Mean: 219.135947. Std: 145.618875. Count: 2845 len(val): 1021
+http://ocsp.godaddy.com/: Avg:44.498268. Min: 24.546154. Max: 75.109575 Mean: 48.103779. Std: 14.489145. Count: 1033 len(val): 1029
+http://ocsp.comodoca.com: Avg:72.968651. Min: 5.655381. Max: 9781.633739 Mean: 81.006828. Std: 301.134013. Count: 1106 len(val): 1058
+http://r3.o.lencr.org: Avg:16.542631. Min: 4.556597. Max: 68.369280 Mean: 14.063814. Std: 10.521249. Count: 1049 len(val): 1049
+http://ocsp.digicert.com: Avg:139.519418. Min: 4.116039. Max: 362.187608 Mean: 137.053863. Std: 56.624696. Count: 1753 len(val): 1015
+http://ocsp.sectigo.com: Avg:10.323315. Min: 5.622429. Max: 29.358912 Mean: 9.016087. Std: 4.069407. Count: 1077 len(val): 1013
+http://ocsp.pki.goog/gts1d4: Avg:12.914448. Min: 4.196625. Max: 60.215230 Mean: 13.889487. Std: 6.702379. Count: 1082 len(val): 1007
+http://oneocsp.microsoft.com/ocsp: Avg:11.830560. Min: 6.186386. Max: 41.492513 Mean: 10.713134. Std: 5.184020. Count: 2402 len(val): 1002
+
+http://oneocsp.microsoft.com/ocsp: Avg:14.026635. Min: 6.025360. Max: 45.345264 Mean: 12.261193. Std: 7.851816. Count: 2398 len(val): 1001
+http://ocsp.msocsp.com: Avg:26.296690. Min: 8.583362. Max: 512.057157 Mean: 22.616493. Std: 22.520924. Count: 2776 len(val): 1001
+http://ocsp.godaddy.com/: Avg:44.576255. Min: 24.562402. Max: 395.205672 Mean: 49.285546. Std: 18.449888. Count: 1058 len(val): 1056
+http://r3.o.lencr.org: Avg:19.902402. Min: 4.569938. Max: 137.991417 Mean: 16.480700. Std: 14.774526. Count: 1063 len(val): 1063
+http://ocsp.sca1b.amazontrust.com: Avg:12.311614. Min: 4.372086. Max: 38.165211 Mean: 11.747978. Std: 6.016830. Count: 1006 len(val): 1005
+http://ocsp.pki.goog/gts1d4: Avg:6.622215. Min: 4.021355. Max: 27.383136 Mean: 5.209477. Std: 3.297006. Count: 1078 len(val): 1002
+http://zerossl.ocsp.sectigo.com: Avg:11.184398. Min: 5.655705. Max: 57.244651 Mean: 10.088310. Std: 4.885855. Count: 5740 len(val): 974
+http://ocsp.comodoca.com: Avg:12.453049. Min: 5.452414. Max: 44.924087 Mean: 11.103401. Std: 5.756375. Count: 1067 len(val): 1020
+http://ocsp.digicert.com: Avg:96.568339. Min: 4.115331. Max: 375.769745 Mean: 58.466261. Std: 83.916595. Count: 1753 len(val): 1014
+http://ocsp.sectigo.com: Avg:15.403903. Min: 5.407013. Max: 3110.127310 Mean: 10.611816. Std: 97.251338. Count: 1084 len(val): 1020
+
+http://r3.o.lencr.org: Avg:13.620547. Min: 4.502006. Max: 62.936758 Mean: 11.806358. Std: 8.326918. Count: 1058 len(val): 1057
+http://ocsp.digicert.com: Avg:95.925608. Min: 4.156939. Max: 357.632606 Mean: 56.902315. Std: 85.185729. Count: 1752 len(val): 1013
+http://ocsp.sectigo.com: Avg:11.007963. Min: 5.712364. Max: 47.176479 Mean: 9.685228. Std: 4.800212. Count: 1087 len(val): 1023
+http://ocsp.comodoca.com: Avg:10.461258. Min: 5.544909. Max: 51.686328 Mean: 9.897097. Std: 3.789677. Count: 1071 len(val): 1024
+http://ocsp.sca1b.amazontrust.com: Avg:11.108866. Min: 4.234129. Max: 41.092216 Mean: 10.437077. Std: 5.443315. Count: 1006 len(val): 1005
+http://ocsp.pki.goog/gts1d4: Avg:6.404023. Min: 4.005008. Max: 31.158623 Mean: 5.017535. Std: 3.282216. Count: 1076 len(val): 1002
+http://oneocsp.microsoft.com/ocsp: Avg:12.568618. Min: 6.152620. Max: 55.202915 Mean: 11.275895. Std: 6.056551. Count: 2398 len(val): 1001
+http://zerossl.ocsp.sectigo.com: Avg:11.414346. Min: 5.700742. Max: 52.294197 Mean: 10.003137. Std: 5.362574. Count: 5740 len(val): 974
+http://ocsp.msocsp.com: Avg:24.983740. Min: 9.164694. Max: 300.779549 Mean: 22.229897. Std: 16.917360. Count: 2786 len(val): 1006
+http://ocsp.godaddy.com/: Avg:43.509019. Min: 24.623523. Max: 72.116611 Mean: 46.348076. Std: 14.035739. Count: 1041 len(val): 1039
+
+http://ocsp.digicert.com & 4.094 & 309.388 & 94.538 & 126.290 & 82.629 \\
+http://ocsp.sca1b.amazontrust.com & 4.243 & 25.727 & 10.217 & 10.552 & 4.031 \\
+http://ocsp.pki.goog/gts1d4 & 3.947 & 16.462 & 5.847 & 4.740 & 2.395 \\
+http://zerossl.ocsp.sectigo.com & 5.689 & 47.538 & 10.645 & 9.954 & 4.043 \\
+http://ocsp.msocsp.com & 9.756 & 211.289 & 24.056 & 21.198 & 14.147 \\
+http://ocsp.godaddy.com/ & 24.481 & 74.467 & 43.166 & 48.474 & 13.910 \\
+http://r3.o.lencr.org & 4.586 & 32.227 & 9.422 & 8.725 & 3.592 \\
+http://ocsp.sectigo.com & 5.346 & 1735.998 & 11.200 & 8.512 & 54.098 \\
+http://oneocsp.microsoft.com/ocsp & 6.015 & 26.065 & 11.362 & 10.629 & 4.664 \\
+http://ocsp.comodoca.com & 5.545 & 46.194 & 9.786 & 8.596 & 3.769 \\
+
+// AFTER REDUCED RATE
+url min max avg mean std
+http://ocsp.digicert.com & 4.369 & 1041.522 & 60.266 & 44.202 & 58.387 \\
+http://ocsp.sca1b.amazontrust.com & 4.641 & 1065.462 & 77.568 & 59.702 & 77.504 \\
+http://ocsp.msocsp.com & 10.077 & 808.370 & 333.824 & 422.010 & 218.492 \\
+http://r3.o.lencr.org & 4.791 & 2246.201 & 1697.399 & 1992.734 & 782.406 \\
+http://ocsp.pki.goog/gts1d4 & 4.248 & 69.340 & 16.780 & 14.724 & 6.766 \\
+http://oneocsp.microsoft.com/ocsp & 6.078 & 181.121 & 51.854 & 61.405 & 33.639 \\
+http://zerossl.ocsp.sectigo.com & 5.819 & 245.368 & 81.421 & 97.593 & 38.592 \\
+http://ocsp.godaddy.com/ & 26.711 & 77.787 & 43.806 & 46.479 & 13.569 \\
+http://ocsp.comodoca.com & 5.604 & 129.881 & 64.850 & 83.899 & 45.792 \\
+http://ocsp.sectigo.com & 5.939 & 186.594 & 80.676 & 87.249 & 31.661 \\

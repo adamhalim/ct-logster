@@ -1,31 +1,44 @@
 package revocado
 
 import (
-	"fmt"
 	"bytes"
-	"encoding/base64"
-	"crypto/x509"
-	"golang.org/x/crypto/ocsp"
-	"io/ioutil"
-	"net/http"
-	"errors"
-	"math/big"
-	"encoding/asn1"
-	"crypto/x509/pkix"
 	"crypto"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"math/big"
 	"math/rand"
+	"net/http"
 	"strconv"
-	"time"
 	"strings"
+	"time"
+
+	"golang.org/x/crypto/ocsp"
 )
 
-
-func GetOCSP(url string, issuer *x509.Certificate, cert *x509.Certificate) (status string, err error){
+func GetOCSP(url string, issuer *x509.Certificate, cert *x509.Certificate, OCSPmap map[string]*OCSPcount) (status string, err error) {
+	start := time.Now()
 	req, err := ocsp.CreateRequest(cert, issuer, nil)
-	ocspResp, err := sendOCSPRequest(url, req,issuer)
-	if err != nil{
+	ocspResp, err := sendOCSPRequest(url, req, issuer)
+	if err != nil {
 		return "", err
 	}
+	timeTakenInms := float64(time.Since(start).Nanoseconds()) / 1e6
+
+	OCSPmap[url].Values = append(OCSPmap[url].Values, timeTakenInms)
+
+	if timeTakenInms > OCSPmap[url].Max {
+		OCSPmap[url].Max = timeTakenInms
+	} else if timeTakenInms < OCSPmap[url].Min {
+		OCSPmap[url].Min = timeTakenInms
+	}
+
+	fmt.Printf("%s %.2f\n", url, timeTakenInms)
+	return "", nil
 
 	if ocspResp.Status == ocsp.Good {
 		return "Good", nil
@@ -43,49 +56,49 @@ func GetOCSP(url string, issuer *x509.Certificate, cert *x509.Certificate) (stat
 // server. The error only indicates a failure to *fetch* the
 // certificate, and *does not* mean the certificate is valid.
 func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResponse *ocsp.Response, err error) {
-    var resp *http.Response
+	var resp *http.Response
 
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-    if len(req) > 256 {
-        buf := bytes.NewBuffer(req)
-        resp, err = client.Post(url, "application/ocsp-request", buf)
-    } else {
-        reqURL := url + "/" + base64.StdEncoding.EncodeToString(req)
-        resp, err = client.Get(reqURL)
-    }
+	if len(req) > 256 {
+		buf := bytes.NewBuffer(req)
+		resp, err = client.Post(url, "application/ocsp-request", buf)
+	} else {
+		reqURL := url + "/" + base64.StdEncoding.EncodeToString(req)
+		resp, err = client.Get(reqURL)
+	}
 
 	if err != nil {
-		if strings.Contains(err.Error(),"(Client.Timeout exceeded while awaiting headers)"){
+		if strings.Contains(err.Error(), "(Client.Timeout exceeded while awaiting headers)") {
 			return nil, errors.New("request canceled while waiting for connection")
 		}
 		return nil, err
-    }
+	}
 
-    if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK {
 		respStat := "Status:"
 		respStat = respStat + strconv.Itoa(resp.StatusCode)
-        return nil, errors.New(respStat)
-    }
+		return nil, errors.New(respStat)
+	}
 
-    body, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        return nil, errors.New("Could not read body")
-    }
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.New("Could not read body")
+	}
 
 	resp.Body.Close()
-    return ocsp.ParseResponse(body, issuer)
+	return ocsp.ParseResponse(body, issuer)
 }
 
-func randomSerialTest(url string, issuer *x509.Certificate)  (ocspResponse *ocsp.Response, err error){
+func randomSerialTest(url string, issuer *x509.Certificate) (ocspResponse *ocsp.Response, err error) {
 	var publicKeyInfo struct {
 		Algorithm pkix.AlgorithmIdentifier
 		PublicKey asn1.BitString
 	}
 	_, err = asn1.Unmarshal(issuer.RawSubjectPublicKeyInfo, &publicKeyInfo)
-	if err != nil{
+	if err != nil {
 		fmt.Println("Error unmarshaling ASN1 info")
 	}
 
@@ -102,7 +115,7 @@ func randomSerialTest(url string, issuer *x509.Certificate)  (ocspResponse *ocsp
 	random_serial := [20]byte{}
 	copy(random_serial[:], "crt.sh")
 	_, err = rand.Read(random_serial[6:])
-	if err != nil{
+	if err != nil {
 		fmt.Println("Error reading random serial")
 	}
 
@@ -110,9 +123,19 @@ func randomSerialTest(url string, issuer *x509.Certificate)  (ocspResponse *ocsp
 	ocsp_req.SerialNumber.SetBytes(random_serial[:])
 
 	ocsp_req_bytes, err := ocsp_req.Marshal()
-	if err != nil{
+	if err != nil {
 		fmt.Println("Rip request bytes")
 	}
 
 	return sendOCSPRequest(url, ocsp_req_bytes, issuer)
+}
+
+type OCSPcount struct {
+	Count  int
+	Min    float64
+	Max    float64
+	Avg    float64
+	Mean   float64
+	Std    float64
+	Values []float64
 }

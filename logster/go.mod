@@ -3,8 +3,10 @@ module logster
 go 1.16
 
 require (
+	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/google/certificate-transparency-go v1.1.1
 	github.com/joho/godotenv v1.3.0
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/robfig/cron v1.2.0
 	go.mongodb.org/mongo-driver v1.5.1
 	golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc

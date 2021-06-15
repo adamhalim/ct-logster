@@ -2,6 +2,13 @@
 
 This project consists of two parts: logster and revocado.
 
+## Testing branch
+This branch is used to measure reponse times to different OCSP servers.
+Modifications have been made in `ocspRevo.go`, to take time measurements.
+The function `CheckPing()` in `DBhandler.go` is responsible for doing the measurements.
+
+*The code is very much hacked together and is in need of some love.*
+
 ## logster
 
 Logster is a tool that is used to monitor CT logs and fetch all newly issued certificates.
