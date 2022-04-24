@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"strings"
+)
 
 	"golang.org/x/crypto/ocsp"
 )
@@ -63,7 +65,6 @@ func sendOCSPRequest(url string, req []byte, issuer *x509.Certificate) (ocspResp
 		}
 		return nil, err
 	}
-
 	if resp.StatusCode != http.StatusOK {
 		respStat := "Status:"
 		respStat = respStat + strconv.Itoa(resp.StatusCode)
