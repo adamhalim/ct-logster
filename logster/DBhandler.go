@@ -9,28 +9,30 @@ import (
 
 	revoc "revocado"
 
-	"golang.org/x/sync/semaphore"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
-	"time"
-	"errors"
 	"strconv"
 	"sync"
+	"time"
+
+	"golang.org/x/sync/semaphore"
 )
 
-const(
+const (
 	unAuth = "ocsp: error from server: unauthorized"
 	verErr = "bad OCSP signature: crypto/rsa: verification error"
 	malFor = "ocsp: error from server: malformed"
 	badSig = "bad OCSP signature: x509: signature algorithm specifies an ECDSA public key, but have public key of type *rsa.PublicKey"
-	notOK = "Status for request no OK"
-	tOut  = "request canceled while waiting for connection"
-	other = "Other error"
+	notOK  = "Status for request no OK"
+	tOut   = "request canceled while waiting for connection"
+	other  = "Other error"
 )
+
 //Array containing all the constants
-var commonErrors  = []string{unAuth, verErr, malFor, badSig, notOK, tOut}
+var commonErrors = []string{unAuth, verErr, malFor, badSig, notOK, tOut}
 var dbUsername, dbPassword, dbIp, dbPort, dbName, dbChainCollection string
 
 // Loads .env file
@@ -49,7 +51,7 @@ func init() {
 }
 
 // Makes one insertion into MongoDB
-func InsertCertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo) error{
+func InsertCertIntoDB(client mongo.Client, cancel context.CancelFunc, cert CertInfo) error {
 	collection := client.Database(dbName).Collection(fmt.Sprintf("%d", time.Now().Hour()))
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -96,8 +98,7 @@ func InsertChainCertIntoDB(client mongo.Client, cancel context.CancelFunc, chain
 	return idString, nil
 }
 
-
-func IterateBlock(blockTime int){
+func IterateBlock(blockTime int) {
 	// Establish connection to MongoDB
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
 	defer cancel()
@@ -105,8 +106,8 @@ func IterateBlock(blockTime int){
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 
 	//disconnects the db when exiting main.
-	// TODO: Make a WaitGroup so that all 
-	// requests finish before disconnecting the 
+	// TODO: Make a WaitGroup so that all
+	// requests finish before disconnecting the
 	// DB.
 	defer func() {
 		if err = client.Disconnect(ctx); err != nil {
@@ -132,7 +133,7 @@ func IterateBlock(blockTime int){
 	if err != nil {
 		fmt.Println("Error when collecting")
 	}
-	count :=0
+	count := 0
 	countS = 0
 	//Number of go-rutines that can run at the same time.
 	//Aquisition is done withing the loop
@@ -142,7 +143,7 @@ func IterateBlock(blockTime int){
 
 	start := time.Now()
 	// Finding multiple documents returns a cursor
- 	// Iterating through the cursor allows us to decode documents one at a time
+	// Iterating through the cursor allows us to decode documents one at a time
 	for cur.Next(context.TODO()) {
 		// create a value into which the single document can be decoded
 		var elem bson.M
@@ -170,13 +171,13 @@ func IterateBlock(blockTime int){
 			defer wg.Done()
 			//CALL METHOD TO CHECK OCSP
 			erro := checkOCSP(elem, certIn.Chain[0], client, *col)
-			if erro != nil{
+			if erro != nil {
 				log.Println(erro)
 			}
 		}()
 		count++
-		if count % 1000 == 0 {
-			fmt.Printf("Reqs / s: %.2f\n", float64(count) / float64(time.Since(start).Seconds()))
+		if count%1000 == 0 {
+			fmt.Printf("Reqs / s: %.2f\n", float64(count)/float64(time.Since(start).Seconds()))
 		}
 	}
 	// Wait until all routines have finished running before continuing.
@@ -194,7 +195,8 @@ func IterateBlock(blockTime int){
 }
 
 var countS int = 0
-func updateCount(){
+
+func updateCount() {
 	countS++
 }
 
@@ -206,15 +208,15 @@ func contains(s []string, str string) int {
 		}
 	}
 	//len(s) specifies that the error is of type "Other error" should be 7
-	return len(s)+1
+	return len(s) + 1
 }
 
 //TODO: Change variable names, comments and use GetPemFromID instead of doing it manually!
-func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col mongo.Collection)(erro error){
+func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col mongo.Collection) (erro error) {
 	isError := false
 	// convert id string to ObjectId
 	objID, err := primitive.ObjectIDFromHex(chainStringID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -227,46 +229,46 @@ func checkOCSP(element bson.M, chainStringID string, client *mongo.Client, col m
 	rett := elemID.(primitive.ObjectID).Hex()
 
 	b, err := DecodePemsToX509(result.PEM)
-	if err != nil{
+	if err != nil {
 		isError = true
 		//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
-		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
+		return AppendNewStatus(col, rett, time.Now(), "Err:"+strconv.Itoa(contains(commonErrors, err.Error())), isError)
 	}
 
 	cert := element["cert"]
 	c, err := DecodePemsToX509(cert.(string))
-	if err != nil{
+	if err != nil {
 		isError = true
 		//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
-		return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
+		return AppendNewStatus(col, rett, time.Now(), "Err:"+strconv.Itoa(contains(commonErrors, err.Error())), isError)
 	}
 
-	if len(b) == 0{
+	if len(b) == 0 {
 		return errors.New("Chain PEM was not found correctly (Len of chain PEM == 0)")
-	}else if len(c) == 0{
+	} else if len(c) == 0 {
 		return errors.New("Cert PEM was not giving correct info (Len of cert PEM == 0)")
-	}else {
+	} else {
 		crl := element["CRL"]
 		serial := element["serialNumber"]
 
-		if ocspURL != nil{
-			a, err :=revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
-			if err != nil{
+		if ocspURL != nil {
+			a, err := revoc.GetOCSP(ocspURL.(string), &b[0], &c[0])
+			if err != nil {
 				isError = true
 				//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
-				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
+				return AppendNewStatus(col, rett, time.Now(), "Err:"+strconv.Itoa(contains(commonErrors, err.Error())), isError)
 			}
 			updateCount()
 
 			return AppendNewStatus(col, rett, time.Now(), a, isError)
-		}else if crl != nil && crl != ""{
+		} else if crl != nil && crl != "" {
 			inCRL, err := revoc.IsCertInCRL(crl.(string), serial.(string))
 			if err != nil {
 				isError = true
 				//Checks if error is "standard error" or "Other error" and puts in a number between 0-6
-				return AppendNewStatus(col, rett, time.Now(), "Err:"+ strconv.Itoa(contains(commonErrors, err.Error())), isError)
+				return AppendNewStatus(col, rett, time.Now(), "Err:"+strconv.Itoa(contains(commonErrors, err.Error())), isError)
 			}
-			if inCRL{
+			if inCRL {
 				fmt.Println("CRL WAS FOUND \n")
 				//If the request is a success the flag should be false
 				return AppendNewStatus(col, rett, time.Now(), "Revoked:7", isError)
@@ -306,73 +308,73 @@ func isChainInDB(chainCert string, client *mongo.Client) (objectID string, err e
 
 //status should only be: Good, Unknown, Revoked or Unexcpected.
 //Unexcpeted will probably be handled earlier in code. But should still be handled here too
-func AppendNewStatus(collection mongo.Collection, certID string, changeTime time.Time, status string, isErr bool) (erro error){
+func AppendNewStatus(collection mongo.Collection, certID string, changeTime time.Time, status string, isErr bool) (erro error) {
 
-   // Read Once
-    var res CertInfo
+	// Read Once
+	var res CertInfo
 	theID, err2 := primitive.ObjectIDFromHex(certID)
-	if err2 != nil{
+	if err2 != nil {
 		return err2
 	}
 	err := collection.FindOne(ctx, bson.M{"_id": theID}).Decode(&res)
-	if err != nil{
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    var update bool = false
-    s := len(res.Changes)
+	var update bool = false
+	s := len(res.Changes)
 
-    if s > 0{
-        lastElem := res.Changes[s-1]
-        if lastElem.Status != status{
-            newEntry := StatusUpdate{status, changeTime, isErr}
-            res.Changes = append(res.Changes, newEntry)
-            update = true
-        }
-    }else {
-        if status != "Good" && status != ""{
-            newEntry := StatusUpdate{status, changeTime, isErr}
-            res.Changes = append(res.Changes, newEntry)
-            update = true
-        }
-    }
+	if s > 0 {
+		lastElem := res.Changes[s-1]
+		if lastElem.Status != status {
+			newEntry := StatusUpdate{status, changeTime, isErr}
+			res.Changes = append(res.Changes, newEntry)
+			update = true
+		}
+	} else {
+		if status != "Good" && status != "" {
+			newEntry := StatusUpdate{status, changeTime, isErr}
+			res.Changes = append(res.Changes, newEntry)
+			update = true
+		}
+	}
 
-    //Actual update to MongoDB. Could possibly be done in batches for better performance
-    if update{
-        //change, err := bson.Marshal(res)
+	//Actual update to MongoDB. Could possibly be done in batches for better performance
+	if update {
+		//change, err := bson.Marshal(res)
 		//fmt.Printf("We updated certID: %s with new data: %s!! \n\n", certID, status)
 		update := bson.M{
-        "$set": res,
+			"$set": res,
 		}
-        if err != nil {
+		if err != nil {
 			return err
 		}
 
-        _, err = collection.UpdateOne(ctx, bson.M{"_id": theID}, update)
-        if err != nil{
+		_, err = collection.UpdateOne(ctx, bson.M{"_id": theID}, update)
+		if err != nil {
 			return err
 		}
-    }
+	}
 	return nil
 }
 
 // Returns the corresponding PEM string for a chain cert ID
 // from the DB
 func getPEMfromID(certID string, client *mongo.Client) (string, error) {
-    objectID, err := primitive.ObjectIDFromHex(certID)
-    if err != nil {
-        return "", err
-    }
-    var result bson.M
-    col := client.Database(dbName).Collection(dbChainCollection)
-    err = col.FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&result)
-    if err != nil {
-        return "", err
-    }
+	objectID, err := primitive.ObjectIDFromHex(certID)
+	if err != nil {
+		return "", err
+	}
+	var result bson.M
+	col := client.Database(dbName).Collection(dbChainCollection)
+	err = col.FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&result)
+	if err != nil {
+		return "", err
+	}
 
-    if result["pem"] != nil {
-        return fmt.Sprintf("%v", result["pem"]), nil
-    }
-    // If no cert found, return error
-    return "", errors.New(fmt.Sprintf("No cert found with id %s.\n", certID))
+	if result["pem"] != nil {
+		return fmt.Sprintf("%v", result["pem"]), nil
+	}
+	// If no cert found, return error
+	return "", errors.New(fmt.Sprintf("No cert found with id %s.\n", certID))
 }
