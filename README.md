@@ -79,7 +79,7 @@ Feel free to play around with this to find a good value for your system.
 
 To set up periodic revocation checking, cron jobs can be used to run the tool every hour. To set up a crontab, run `crontab -e` and put in the following:
 
-`0 * * * * /path/to/ct-logster/logster rev >> /path/to/ct-logster/output.txt`
+`0 * * * * /path/to/ct-logster/logster/logster rev >> /path/to/ct-logster/logster/output.txt`
 
 This will run a revocation check every hour and append the output to `output.txt`.
 
