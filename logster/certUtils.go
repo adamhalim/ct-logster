@@ -248,7 +248,7 @@ func getPEMdata(data []byte) string {
 // Returns the cert rate in certificates per second between
 // specified interval.
 // The tolerance should be between 0-1 and specifies how close we can
-// be to our hoursBack before we are satisfied. A tolerance of 0.1 means we need 
+// be to our hoursBack before we are satisfied. A tolerance of 0.1 means we need
 // to be ± 10 % within our target.
 func (ctlog CTLog) GetCertRateHistory(hoursBack float64, duration float64, tolerance float64) (float64, error) {
 	firstIndex, firstHour, err := ctlog.getIndexHistory(hoursBack, tolerance)
@@ -256,13 +256,13 @@ func (ctlog CTLog) GetCertRateHistory(hoursBack float64, duration float64, toler
 		return 0, err
 	}
 
-	secondIndex, secondHour, err := ctlog.getIndexHistory(hoursBack - duration, tolerance)
+	secondIndex, secondHour, err := ctlog.getIndexHistory(hoursBack-duration, tolerance)
 	if err != nil {
 		return 0, err
 	}
 
 	// How many certs / second between the two indexes
-	rate := ( float64(secondIndex) - float64(firstIndex) ) / ((float64(firstHour) - float64(secondHour)) * 3600) 
+	rate := (float64(secondIndex) - float64(firstIndex)) / ((float64(firstHour) - float64(secondHour)) * 3600)
 	if math.IsNaN(rate) {
 		return 0, nil
 	}
@@ -281,12 +281,12 @@ func (ctlog CTLog) getIndexHistory(hoursBack float64, tolerance float64) (uint64
 	}
 
 	// We use an initial offset of 0.1 % of the treeSize
-	indexOffset := math.Ceil(float64(treeSize.TreeSize) * 0.001) + 1
+	indexOffset := math.Ceil(float64(treeSize.TreeSize)*0.001) + 1
 	currIndex := float64(treeSize.TreeSize) - indexOffset
 
 	// We get the latest entry in the CTLog and record the timestamp
 	// of that entry.
-	entry, err := ctlog.logClient.GetRawEntries(context.Background(), int64(treeSize.TreeSize - 1), int64(treeSize.TreeSize - 1))
+	entry, err := ctlog.logClient.GetRawEntries(context.Background(), int64(treeSize.TreeSize-1), int64(treeSize.TreeSize-1))
 	if err != nil {
 		return 0, 0, err
 	}
@@ -336,7 +336,7 @@ func (ctlog CTLog) getIndexHistory(hoursBack float64, tolerance float64) (uint64
 		// It will fail for logs with large batches of certs.
 		// Also won't work for small logs (which don't matter much anyways)
 		// TODO: Use a SMA with binary search or something similar?
-		indexOffset = math.Ceil((hoursBack / hourDiff) * indexOffset) + 1
+		indexOffset = math.Ceil((hoursBack/hourDiff)*indexOffset) + 1
 
 		// Bad check here. While we are out of bounds, there might still be
 		// an entry at the start of the log within our target. Will
@@ -348,7 +348,7 @@ func (ctlog CTLog) getIndexHistory(hoursBack float64, tolerance float64) (uint64
 			continue
 		}
 		// Break when we are within our tolerance
-		if  float64(hourDiff) > (hoursBack * (1 - tolerance)) && float64(hourDiff) < (hoursBack * (1 + tolerance))  {
+		if float64(hourDiff) > (hoursBack*(1-tolerance)) && float64(hourDiff) < (hoursBack*(1+tolerance)) {
 			break
 		}
 	}
@@ -356,7 +356,7 @@ func (ctlog CTLog) getIndexHistory(hoursBack float64, tolerance float64) (uint64
 }
 
 // Checks if to see the hours are in the scope of the log's life.
-// To do this, we grab the first entry in the log and see how many 
+// To do this, we grab the first entry in the log and see how many
 // hours ago it was uploaded.
 func hourOffsetInBounds(ctlog CTLog, timeNow time.Time, hours float64) (bool, error) {
 	entry, err := ctlog.logClient.GetRawEntries(context.Background(), 0, 0)
@@ -367,12 +367,12 @@ func hourOffsetInBounds(ctlog CTLog, timeNow time.Time, hours float64) (bool, er
 	if err != nil {
 		return false, err
 	}
-	
+
 	entryTime := int64(logentry.Leaf.TimestampedEntry.Timestamp)
 	timeDiff := timeNow.Unix() - entryTime
 	// Time is in ms, divide by 3600 * 1000 to get hours
 	hourDiff := float64(timeDiff) / (3600000)
-	
+
 	if hourDiff < hours {
 		return false, errors.New(fmt.Sprintf("Offset of %.2f hours is greater than first entry in log.", hours))
 	}

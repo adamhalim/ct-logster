@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/robfig/cron"
 
@@ -42,9 +42,9 @@ type CertInfo struct {
 	Changes      []StatusUpdate `bson:"Change"`
 }
 
-type StatusUpdate struct{
-	Status 	string
-	Time 	time.Time
+type StatusUpdate struct {
+	Status  string
+	Time    time.Time
 	IsError bool
 }
 
@@ -57,9 +57,9 @@ var CTLogs []CTLog
 
 func init() {
 
-	// Only init all LogClients if we are 
+	// Only init all LogClients if we are
 	// running logster.
-	if len(os.Args)>1{
+	if len(os.Args) > 1 {
 		if os.Args[1] == "log" {
 			logs = loadLogsFromFile()
 			initLogClients()
@@ -100,17 +100,17 @@ func initLogClients() {
 	}
 }
 
-func main(){
+func main() {
 	programName := "no args"
-	if len(os.Args)>1{
+	if len(os.Args) > 1 {
 		programName = os.Args[1]
 		fmt.Println(programName)
 	}
 
-	if programName == "log"{
+	if programName == "log" {
 		logMain()
 
-	}else if programName == "rev"{
+	} else if programName == "rev" {
 		//cronjobs start
 		log.Println("Create new cron")
 		c := cron.New()
@@ -122,20 +122,18 @@ func main(){
 		log.Printf("Cron Info: %+v\n", c.Entries)
 		revocMain()
 		time.Sleep(185 * time.Minute)
-	}else{
+	} else {
 		fmt.Println("Start with either log or rev")
 	}
 }
 
-func revocMain(){
+func revocMain() {
 	fmt.Println("We running revocMain!")
 	actualTime := time.Now()
 	hour := actualTime.Hour()
 	fmt.Println(hour)
 	IterateBlock(hour)
 }
-
-// 1102495 - 1105460
 
 // Returns the current Tree Size for a give CT log
 func getCurrentTreeSize(ctlog CTLog) (uint64, error) {
@@ -183,7 +181,6 @@ func logMain() {
 	// Each time our timer is ran, we increment our index and
 	// run through each CTLog in CTLogs.
 
-	// 1203840 - 1280163
 	var counter uint64
 	elapsedTime := 0.0
 	start := time.Now()
@@ -227,7 +224,7 @@ func logMain() {
 
 			// Index start at 0, so we need to decrement the current tree size to get the last index.
 			// For example, for a tree size of 100, last entry has index 99.
-			cert, chain, err := DownloadManyCertsFromCT(CTLogs[ind].currentIndex, currSTH - 1, CTLogs[ind].logClient.BaseURI())
+			cert, chain, err := DownloadManyCertsFromCT(CTLogs[ind].currentIndex, currSTH-1, CTLogs[ind].logClient.BaseURI())
 
 			// Sometimes, the tree size updates before the
 			// get-entries endpoint does, meaning we try to
@@ -242,7 +239,7 @@ func logMain() {
 			// failed to download all certificates and should try again later.
 			// This makes the above len(cert) == 0 check redundant, but
 			// I'll leave it here for debugging/logging
-			if uint64(len(cert)) != (currSTH-CTLogs[ind].currentIndex) {
+			if uint64(len(cert)) != (currSTH - CTLogs[ind].currentIndex) {
 				fmt.Printf("Wrong amount of certs downloaded, retrying later...\n")
 				return
 			}
@@ -373,27 +370,27 @@ func skipBatchPrint(ctlog CTLog, currSTH uint64) {
 	fmt.Printf("Error caused Logster to skip entire batch.\n")
 	fmt.Printf("CTLog URL: %s.\n", ctlog.logClient.BaseURI())
 	fmt.Printf("Current index: %d. Current tree size: %d.\n", ctlog.currentIndex, currSTH)
-	fmt.Printf("Log entries skipped: %d.\n", currSTH - ctlog.currentIndex + 1)
+	fmt.Printf("Log entries skipped: %d.\n", currSTH-ctlog.currentIndex+1)
 	fmt.Printf("******************************\n")
 }
 
 // Reads all ctlog URLs from file
 func loadLogsFromFile() []string {
-	fileName := "logs.txt"
+	fileName := "ctlogs.txt"
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
-	
+
 	var logArray []string
 	for scanner.Scan() {
 		logArray = append(logArray, scanner.Text())
 	}
 	// If the file was empty, quit.
 	if len(logArray) < 1 {
-		log.Fatal(fmt.Sprintf( "No CTLogs found in %s.\n", fileName))
+		log.Fatal(fmt.Sprintf("No CTLogs found in %s.\n", fileName))
 	}
 	return logArray
 }
