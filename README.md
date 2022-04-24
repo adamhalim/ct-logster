@@ -5,11 +5,11 @@ This repository contains the tools for collecting newly issued x509 certificates
 ## logster
 
 Logster is the tool that is used to monitor CT logs and fetch all newly issued certificates.
-The tool can listen to any amount of CT logs which reside in `logs.txt`. 
+The tool can listen to any amount of CT logs which reside in `ctlogs.txt`. 
 Each log URL is separated by a new line, and should not start with https://.
 
 <details>
-<summary>Example logs.txt file</summary>
+<summary>Example ctlogs.txt file</summary>
   
 ```
 yeti2022.ct.digicert.com/log
