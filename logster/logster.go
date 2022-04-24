@@ -135,8 +135,6 @@ func revocMain() {
 	IterateBlock(hour)
 }
 
-// 1102495 - 1105460
-
 // Returns the current Tree Size for a give CT log
 func getCurrentTreeSize(ctlog CTLog) (uint64, error) {
 	sth, err := ctlog.logClient.GetSTH(context.Background())
@@ -183,7 +181,6 @@ func logMain() {
 	// Each time our timer is ran, we increment our index and
 	// run through each CTLog in CTLogs.
 
-	// 1203840 - 1280163
 	var counter uint64
 	elapsedTime := 0.0
 	start := time.Now()
