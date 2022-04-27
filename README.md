@@ -108,4 +108,4 @@ Revocation checking can be performed in parallell with certificate collection, w
 
 # Notes
 Were you to use our code, dataset, or parts of it in your work, we kindly ask that you reference the following paper in your publication:
-Adam Halim, Max Danielsson, Martin Arlitt and Niklas Carlsson, "Temporal Analysis of X.509 Revocations and their Statuses", *Proc. International Workshop on Traffic Measurements for Cybersecurity (WTMC)*, June 2022
+* Adam Halim, Max Danielsson, Martin Arlitt and Niklas Carlsson, "Temporal Analysis of X.509 Revocations and their Statuses", *Proc. International Workshop on Traffic Measurements for Cybersecurity (WTMC)*, Genoa, Italy, June 2022
